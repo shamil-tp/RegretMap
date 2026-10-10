@@ -343,7 +343,12 @@ Publishing means a moderator allowed it on the site — not that it was verified
 
 ### Set up a Supabase project
 
-Run these in **Supabase Dashboard → SQL Editor** (or `npx supabase db push` if you
+**Quickest:** paste `supabase/setup_all.sql` into **Supabase Dashboard → SQL Editor**
+and run it. It creates everything below and inserts the demo data in one
+transaction, and is safe to re-run. (It is generated from the migration and seed
+files — edit those, not `setup_all.sql`.)
+
+Or run the individual files in the SQL Editor (or `npx supabase db push` if you
 use the Supabase CLI), in order:
 
 1. `supabase/migrations/20261011120000_create_destinations_and_stories.sql`
