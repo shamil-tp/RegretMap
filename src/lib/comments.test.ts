@@ -14,6 +14,7 @@ function row(overrides: Partial<CommentRow> = {}): CommentRow {
     id: "c1",
     story_id: "s1",
     parent_id: null,
+    depth: 0,
     author_name: "Asha",
     body: "Great tip",
     status: "published",
@@ -76,6 +77,28 @@ describe("buildThreads", () => {
     expect(threads.map((t) => t.id)).toEqual(["p1", "p2"]);
     expect(threads[0].replies.map((r) => r.id)).toEqual(["r1", "r2"]);
     expect(countComments(threads)).toBe(4);
+  });
+
+  it("nests replies to replies at any depth", () => {
+    const threads = buildThreads([
+      comment({ id: "p1", createdAt: "2026-10-01T10:00:00Z" }),
+      comment({ id: "r1", parentId: "p1", depth: 1, createdAt: "2026-10-01T11:00:00Z" }),
+      comment({ id: "r2", parentId: "r1", depth: 2, createdAt: "2026-10-01T12:00:00Z" }),
+      comment({ id: "r3", parentId: "r2", depth: 3, createdAt: "2026-10-01T13:00:00Z" }),
+    ]);
+    expect(threads[0].replies[0].replies[0].replies[0].id).toBe("r3");
+    expect(countComments(threads)).toBe(4);
+  });
+
+  it("keeps a deleted reply as a placeholder while it has visible replies", () => {
+    const threads = buildThreads([
+      comment({ id: "p1", createdAt: "2026-10-01T10:00:00Z" }),
+      comment({ id: "r1", parentId: "p1", deleted: true, createdAt: "2026-10-01T11:00:00Z" }),
+      comment({ id: "r2", parentId: "r1", createdAt: "2026-10-01T12:00:00Z" }),
+      comment({ id: "r3", parentId: "p1", deleted: true, createdAt: "2026-10-01T13:00:00Z" }),
+    ]);
+    expect(threads[0].replies.map((r) => r.id)).toEqual(["r1"]);
+    expect(countComments(threads)).toBe(2);
   });
 
   it("drops replies whose parent isn't visible", () => {

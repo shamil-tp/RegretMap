@@ -1,4 +1,5 @@
--- RegretMap Phase 12: comments and one level of replies on published stories.
+-- RegretMap Phase 12: threaded comments (Reddit-style replies to replies, up to
+-- 6 levels deep) on published stories.
 -- Additive only. Requires Supabase Auth (auth.users), present in every project.
 --
 -- Security model
@@ -8,8 +9,9 @@
 --     to auth.uid() and isn't in the insert grant, so it can't be spoofed;
 --     status isn't grantable either. author_name is set by a trigger from the
 --     account, never from the request.
---   * A reply's parent must be a top-level, visible comment on the SAME story
---     (composite foreign key + trigger), so replies can't cross stories.
+--   * A reply's parent must be a visible comment on the SAME story (composite
+--     foreign key + trigger), so replies can't cross stories. depth is set by
+--     the trigger (parent depth + 1) and capped at 5 (6 visible levels).
 --   * Authors can edit only the body of their own comments; deletion goes
 --     through delete_story_comment(), which leaves a "deleted" placeholder when
 --     the comment has replies so other people's replies aren't removed.
@@ -21,6 +23,8 @@ create table if not exists public.story_comments (
   story_id    uuid not null references public.stories (id) on delete cascade,
   user_id     uuid not null default auth.uid() references auth.users (id) on delete cascade,
   parent_id   uuid,
+  -- 0 = top-level comment; set by trigger, never by clients.
+  depth       smallint not null default 0 check (depth between 0 and 5),
   author_name text not null check (char_length(author_name) between 1 and 40),
   body        text not null check (char_length(body) between 1 and 1000),
   status      text not null default 'published'
@@ -36,7 +40,7 @@ create table if not exists public.story_comments (
 );
 
 comment on table public.story_comments is
-  'Comments and one level of replies on published stories. user_id is private.';
+  'Threaded comments on published stories (max depth 5). user_id is private.';
 
 create index if not exists story_comments_story_created_idx
   on public.story_comments (story_id, created_at);
@@ -74,20 +78,25 @@ begin
     new.user_id := old.user_id;
     new.story_id := old.story_id;
     new.parent_id := old.parent_id;
+    new.depth := old.depth;
     new.created_at := old.created_at;
   end if;
 
-  if tg_op = 'INSERT' and new.parent_id is not null then
-    select c.parent_id, c.status, c.story_id into parent
-    from public.story_comments c where c.id = new.parent_id;
-    if not found or parent.story_id <> new.story_id then
-      raise exception 'Reply parent must be a comment on the same story' using errcode = '23503';
-    end if;
-    if parent.parent_id is not null then
-      raise exception 'Replies can only be one level deep' using errcode = '23514';
-    end if;
-    if parent.status <> 'published' then
-      raise exception 'Cannot reply to this comment' using errcode = '42501';
+  if tg_op = 'INSERT' then
+    new.depth := 0;
+    if new.parent_id is not null then
+      select c.depth, c.status, c.story_id into parent
+      from public.story_comments c where c.id = new.parent_id;
+      if not found or parent.story_id <> new.story_id then
+        raise exception 'Reply parent must be a comment on the same story' using errcode = '23503';
+      end if;
+      if parent.depth >= 5 then
+        raise exception 'This thread is too deep to reply to' using errcode = '23514';
+      end if;
+      if parent.status <> 'published' then
+        raise exception 'Cannot reply to this comment' using errcode = '42501';
+      end if;
+      new.depth := parent.depth + 1;
     end if;
   end if;
   return new;
@@ -106,7 +115,7 @@ create or replace trigger story_comments_before_write
 alter table public.story_comments enable row level security;
 
 revoke all on public.story_comments from anon, authenticated;
-grant select (id, story_id, parent_id, author_name, body, status, created_at, updated_at)
+grant select (id, story_id, parent_id, depth, author_name, body, status, created_at, updated_at)
   on public.story_comments to anon, authenticated;
 grant insert (story_id, parent_id, body) on public.story_comments to authenticated;
 grant update (body) on public.story_comments to authenticated;

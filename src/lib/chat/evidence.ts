@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { stripRefs, unsupportedNumbers } from "@/lib/ai/grounding";
 import type { StoryCategory, StoryWithDestination } from "@/lib/stories";
 
 /*
@@ -94,14 +95,26 @@ export type ChatAnswer = {
 
 const LINK_PATTERN = /https?:\/\/|www\.|\b[a-z0-9-]+\.(?:com|net|org|in|io|xyz|shop|info|biz)\b/i;
 
+/** Every story field the model was shown, for grounding checks. */
+function storyText(story: StoryWithDestination) {
+  return [story.title, story.place, story.body, story.challenge, story.lesson, story.advice]
+    .filter(Boolean)
+    .join(" ");
+}
+
 /**
- * Validates untrusted model text. Null if malformed, if it cites a story the
- * server didn't send for this destination, or if it contains links.
+ * Validates untrusted model text. Null (→ retry, then an honest fallback) if
+ * it's malformed, cites a story the server didn't send for this destination,
+ * contains links, or states a number that isn't in the stories it cites or the
+ * question. An answer citing no story comes back with an empty `answer`: the
+ * caller replaces it with a fixed "not covered" message, so uncited text —
+ * where general knowledge would leak in — is never shown.
  */
 export function validateChatAnswer(
   text: string,
   refs: Map<string, StoryWithDestination>,
   destinationId: string,
+  question = "",
 ): ChatAnswer | null {
   if (text.length > 6000) return null;
   let json: unknown;
@@ -114,17 +127,19 @@ export function validateChatAnswer(
   if (!parsed.success || LINK_PATTERN.test(parsed.data.answer)) return null;
 
   const sources: ChatAnswer["sources"] = [];
+  const cited: StoryWithDestination[] = [];
   for (const ref of new Set(parsed.data.sources)) {
     const story = refs.get(ref);
     if (!story || story.destinationId !== destinationId) return null;
     sources.push({ id: story.id, title: story.title });
+    cited.push(story);
   }
-  return {
-    answer: parsed.data.answer,
-    sources,
-    // An answer that cites nothing can't claim sufficient community evidence.
-    sufficientEvidence: parsed.data.sufficient_evidence && sources.length > 0,
-  };
+  if (sources.length === 0) return { answer: "", sources, sufficientEvidence: false };
+
+  const answer = stripRefs(parsed.data.answer);
+  if (!answer) return null;
+  if (unsupportedNumbers(answer, [...cited.map(storyText), question]).length > 0) return null;
+  return { answer, sources, sufficientEvidence: parsed.data.sufficient_evidence };
 }
 
 export type ChatTurn = { role: "user" | "assistant"; text: string };

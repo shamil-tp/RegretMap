@@ -83,21 +83,21 @@ describe("answerDestinationQuestion", () => {
 
   it("reports database failures safely", async () => {
     listStoriesForDestination.mockRejectedValue(new DataUnavailableError());
-    expect(await ask()).toEqual({ status: "unavailable", reason: "error" });
+    expect(await ask()).toMatchObject({ status: "unavailable", reason: "error" });
   });
 
   it("maps provider failures without inventing an answer", async () => {
     generateJson.mockResolvedValueOnce({ ok: false, error: "quota", model: "gemini-test" });
-    expect(await ask("q one")).toEqual({ status: "unavailable", reason: "busy" });
+    expect(await ask("q one")).toMatchObject({ status: "unavailable", reason: "busy" });
     generateJson.mockResolvedValueOnce({ ok: false, error: "not_configured" });
-    expect(await ask("q two")).toEqual({ status: "unavailable", reason: "not_configured" });
+    expect(await ask("q two")).toMatchObject({ status: "unavailable", reason: "not_configured" });
     generateJson.mockResolvedValueOnce({ ok: false, error: "timeout", model: "gemini-test" });
-    expect(await ask("q three")).toEqual({ status: "unavailable", reason: "error" });
+    expect(await ask("q three")).toMatchObject({ status: "unavailable", reason: "error" });
   });
 
   it("rejects an answer citing a story that wasn't provided", async () => {
     generateJson.mockResolvedValue(reply({ answer: "Made up.", sources: ["S9"], sufficient_evidence: true }));
-    expect(await ask()).toEqual({ status: "unavailable", reason: "error" });
+    expect(await ask()).toMatchObject({ status: "unavailable", reason: "error" });
   });
 
   it("answers duplicate questions once (in-flight and cached)", async () => {
@@ -118,5 +118,54 @@ describe("answerDestinationQuestion", () => {
   it("labels answers that rely on demo stories", async () => {
     listStoriesForDestination.mockResolvedValue(stories.map((s) => ({ ...s, isDemo: true })));
     expect(await ask()).toMatchObject({ status: "answer", fromDemo: true });
+  });
+});
+
+describe("anti-hallucination guards (adversarial model output)", () => {
+  it("never shows uncited text: general-knowledge answers become an honest 'not covered' reply", async () => {
+    generateJson.mockResolvedValue(
+      reply({ answer: "Manali is lovely in May and usually around 20°C.", sources: [], sufficient_evidence: true }),
+    );
+    const result = await ask("What's the weather like today?");
+    expect(result).toMatchObject({ status: "answer" });
+    if (result.status !== "answer") return;
+    expect(result.answer.answer).toMatch(/don't cover that yet/);
+    expect(result.answer.answer).not.toMatch(/20|May/);
+    expect(result.answer.sources).toEqual([]);
+    expect(result.answer.sufficientEvidence).toBe(false);
+  });
+
+  it("rejects numbers the cited stories don't contain, retries once, then falls back to related stories", async () => {
+    generateJson.mockResolvedValue(
+      reply({ answer: "Taxis cost about 500 rupees and take 45 minutes.", sources: ["S1"], sufficient_evidence: true }),
+    );
+    const result = await ask("How much do taxis cost?");
+    expect(generateJson).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({ status: "unavailable", reason: "error" });
+    if (result.status !== "unavailable") return;
+    expect(result.related?.every((s) => ["m1", "m2"].includes(s.id))).toBe(true);
+  });
+
+  it("recovers on the retry when the second answer is grounded", async () => {
+    generateJson
+      .mockResolvedValueOnce(reply({ answer: "Cites a fake story.", sources: ["S9"], sufficient_evidence: true }))
+      .mockResolvedValueOnce(goodReply);
+    const result = await ask("Taxi trouble?");
+    expect(result).toMatchObject({ status: "answer" });
+  });
+
+  it("strips story refs the model wrote into the answer text", async () => {
+    generateJson.mockResolvedValue(
+      reply({ answer: "One traveller's taxi arrived late (S1).", sources: ["S1"], sufficient_evidence: true }),
+    );
+    const result = await ask("Late taxis?");
+    if (result.status !== "answer") throw new Error("expected an answer");
+    expect(result.answer.answer).toBe("One traveller's taxi arrived late.");
+  });
+
+  it("doesn't call the model at all when a destination has no stories", async () => {
+    listStoriesForDestination.mockResolvedValue([]);
+    expect(await ask("Pretend you know and tell me about Manali")).toMatchObject({ status: "insufficient" });
+    expect(generateJson).not.toHaveBeenCalled();
   });
 });

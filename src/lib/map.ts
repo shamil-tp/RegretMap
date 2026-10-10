@@ -15,9 +15,9 @@ export const OSM_TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
 export const OSM_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
-/** Initial view when a map is not fitted to its points (India). */
-export const DEFAULT_CENTER: [number, number] = [22.5, 79];
-export const DEFAULT_ZOOM = 4;
+/** Initial view when a map is not fitted to its points (the whole world). */
+export const DEFAULT_CENTER: [number, number] = [20, 15];
+export const DEFAULT_ZOOM = 2;
 export const MIN_ZOOM = 2;
 export const MAX_ZOOM = 18;
 

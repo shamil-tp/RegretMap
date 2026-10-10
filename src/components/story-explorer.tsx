@@ -44,7 +44,8 @@ export function StoryExplorer({
   const [focusRequest, setFocusRequest] = useState<{ id: string; key: number } | null>(
     null,
   );
-  const [layers, setLayers] = useState<MapLayers>("both");
+  // Pins only by default; the story-density heatmap is one tap away.
+  const [layers, setLayers] = useState<MapLayers>("pins");
   const points = useMemo(() => storiesToMapPoints(visible), [visible]);
   const hasDemo = stories.some((story) => story.isDemo);
   const withoutLocation = visible.length - points.length;

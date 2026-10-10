@@ -74,6 +74,19 @@ export function DestinationChat({ slug, destinationName }: { slug: string; desti
 
     setMessages((current) => {
       const id = nextId.current++;
+      if (result.status === "fallback") {
+        return [
+          ...current,
+          {
+            id,
+            role: "assistant",
+            text: result.message,
+            sources: result.sources,
+            sufficientEvidence: true,
+            fromDemo: false,
+          },
+        ];
+      }
       if (result.status === "answer") {
         return [
           ...current,

@@ -54,9 +54,9 @@ it("falls back to the second key when the primary is rate-limited", async () => 
 
 it("fails safely, without looping, when every key is rate-limited", async () => {
   fetchMock.mockImplementation(async () => new Response("{}", { status: 429 }));
-  expect(await ask("Any transport problems?")).toEqual({ status: "unavailable", reason: "busy" });
+  expect(await ask("Any transport problems?")).toMatchObject({ status: "unavailable", reason: "busy" });
   expect(fetchMock).toHaveBeenCalledTimes(2);
   // Both keys resting: the next question makes no network call.
-  expect(await ask("What about cash?")).toEqual({ status: "unavailable", reason: "busy" });
+  expect(await ask("What about cash?")).toMatchObject({ status: "unavailable", reason: "busy" });
   expect(fetchMock).toHaveBeenCalledTimes(2);
 });

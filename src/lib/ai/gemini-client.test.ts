@@ -85,15 +85,17 @@ describe("generateJson key rotation", () => {
       .mockResolvedValue(ok());
     await generateJson(request);
 
+    // Make every key fail so each request shows exactly which keys are usable.
     vi.setSystemTime(new Date("2026-10-11T00:00:20Z"));
     fetchMock.mockClear();
+    fetchMock.mockResolvedValue(status(500));
     await generateJson(request);
-    expect(usedKeys()).toEqual([KEYS[1]]); // still resting after 20s
+    expect(usedKeys()).not.toContain(KEYS[0]); // still resting after 20s
 
     vi.setSystemTime(new Date("2026-10-11T00:00:31Z"));
     fetchMock.mockClear();
     await generateJson(request);
-    expect(usedKeys()).toEqual([KEYS[0]]); // back after 30s
+    expect(usedKeys()).toContain(KEYS[0]); // back after 30s
   });
 
   it("uses the Retry-After header when present", async () => {
@@ -103,8 +105,9 @@ describe("generateJson key rotation", () => {
     await generateJson(request);
     vi.setSystemTime(new Date("2026-10-11T00:01:30Z"));
     fetchMock.mockClear();
+    fetchMock.mockResolvedValue(status(500));
     await generateJson(request);
-    expect(usedKeys()).toEqual([KEYS[1]]);
+    expect(usedKeys()).not.toContain(KEYS[0]);
   });
 
   it("falls back on a temporary 5xx error", async () => {
@@ -145,12 +148,35 @@ describe("generateJson key rotation", () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
-  it("does not rotate on timeouts or network errors", async () => {
-    fetchMock.mockRejectedValueOnce(new DOMException("t", "TimeoutError"));
-    expect(await generateJson(request)).toMatchObject({ ok: false, error: "timeout" });
-    fetchMock.mockRejectedValueOnce(new TypeError("fetch failed"));
-    expect(await generateJson(request)).toMatchObject({ ok: false, error: "network" });
+  it("moves to another key after a timeout or network error", async () => {
+    fetchMock.mockRejectedValueOnce(new DOMException("t", "TimeoutError")).mockResolvedValue(ok());
+    expect(await generateJson(request)).toMatchObject({ ok: true });
     expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    fetchMock.mockClear();
+    fetchMock.mockRejectedValue(new TypeError("fetch failed"));
+    expect(await generateJson(request)).toMatchObject({ ok: false, error: "network" });
+  });
+
+  it("rotates the starting key round-robin across requests", async () => {
+    fetchMock.mockImplementation(async () => ok());
+    for (let i = 0; i < 4; i++) await generateJson(request);
+    expect(usedKeys()).toEqual([KEYS[0], KEYS[1], KEYS[2], KEYS[0]]);
+  });
+
+  it("tries the optional fallback model when the main model is overloaded on every key", async () => {
+    vi.stubEnv("GEMINI_FALLBACK_MODEL", "gemini-fallback-model");
+    fetchMock.mockImplementation(async (url: string) =>
+      url.includes("gemini-fallback-model") ? ok() : status(503),
+    );
+    expect(await generateJson(request)).toMatchObject({ ok: true, model: "gemini-fallback-model" });
+  });
+
+  it("does not use the fallback model for a malformed request", async () => {
+    vi.stubEnv("GEMINI_FALLBACK_MODEL", "gemini-fallback-model");
+    fetchMock.mockResolvedValue(status(400, { error: { message: "Invalid JSON payload" } }));
+    expect(await generateJson(request)).toMatchObject({ ok: false, error: "http_4xx" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("reports not_configured without calling the API", async () => {

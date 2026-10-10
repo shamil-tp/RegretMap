@@ -83,6 +83,21 @@ say "saved but isn't public yet"; now stories go live immediately.
 - SQL order: Phase 10 migration → 20261011170000_story_source → seed_india_editorial → india_seed_check →
   20261012100000_story_comments → comments_rls_check.
 
+## 2d. World content, threaded comments, AI reliability (2026-10-12)
+
+- World seed: `supabase/seed/world/*.mjs` → `npm run seed:world` → `supabase/seed_world_editorial.sql`
+  + `supabase/tests/world_seed_check.sql` (95 notes, 55 destinations, 42 countries, 6 continents;
+  slugs checked against the India seed). Home map now opens on the world (zoom 2), pins-only by default.
+- Comments are Reddit-style: replies to replies up to depth 5 (DB-enforced via trigger-set `depth`),
+  collapsible threads. Migration 20261012100000 was edited in place (never applied anywhere yet).
+- Gemini client: round-robin across keys, timeouts/5xx move to the next key (3 s rest),
+  optional `GEMINI_FALLBACK_MODEL`. Chat/recs retry once on a rejected answer; recs backoff 60 s.
+- Grounding guards (`src/lib/ai/grounding.ts`): refs stripped from prose, numbers must appear in
+  cited stories, uncited chat answers replaced by a fixed "not covered" reply, model overview/
+  limitations no longer shown. Chat falls back to related stories when Gemini is down.
+- Live check 2026-10-12 (synthetic stories): chat, an adversarial "use your own knowledge" question,
+  and recommendations all returned grounded results.
+
 ## 3. Owner must still do (remote, manual)
 
 1. **Apply the Phase 10 migration.** It is NOT on Supabase yet; checked 2026-10-11:

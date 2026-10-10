@@ -129,3 +129,35 @@ describe("isValidCachedPayload", () => {
     expect(isValidCachedPayload({ nonsense: true }, DEST, new Set(["a"]))).toBe(false);
   });
 });
+
+describe("recommendation grounding guards", () => {
+  const refsFor = buildEvidencePayload("Testville", [
+    story({ id: "a", destinationId: "dest-1", title: "Late taxi", body: "The taxi came 2 hours late." }),
+  ]).refs;
+  const meta2 = { destinationId: "dest-1", fromDemo: false, model: "m", generatedAt: "2026-10-12T00:00:00Z" };
+  const json = (recommendations: unknown[]) =>
+    JSON.stringify({ overview: "Munnar is famous for tea and is 1,600 m high.", recommendations, limitations: "Few stories." });
+
+  it("drops tips with invented numbers and keeps grounded ones", () => {
+    const result = validateRecommendations(
+      json([
+        { category: "transport", title: "Allow extra time", advice: "One taxi came 2 hours late.", sources: ["S1"] },
+        { category: "costs", title: "Budget for taxis", advice: "Taxis cost 900 rupees.", sources: ["S1"] },
+      ]),
+      refsFor,
+      meta2,
+    );
+    expect(result?.recommendations.map((r) => r.title)).toEqual(["Allow extra time"]);
+  });
+
+  it("never shows the model's unsourced overview or limitations", () => {
+    const result = validateRecommendations(
+      json([{ category: "transport", title: "Allow extra time", advice: "One taxi came 2 hours late (S1).", sources: ["S1"] }]),
+      refsFor,
+      meta2,
+    );
+    expect(result?.overview).toBe("");
+    expect(result?.limitations).toBeUndefined();
+    expect(result?.recommendations[0].advice).toBe("One taxi came 2 hours late.");
+  });
+});

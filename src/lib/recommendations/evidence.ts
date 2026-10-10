@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { stripRefs, unsupportedNumbers } from "@/lib/ai/grounding";
 import {
   formatTravelMonth,
   storyCategories,
@@ -15,7 +16,7 @@ import {
  * so the model can never invent or redirect a citation.
  */
 
-export const PROMPT_VERSION = "rec-v2";
+export const PROMPT_VERSION = "rec-v3";
 /** Fewer published stories than this → honest "not enough evidence" state. */
 export const MIN_EVIDENCE_STORIES = 2;
 /** Upper bound on stories sent to the model (newest first). */
@@ -166,10 +167,18 @@ export function validateRecommendations(
     // A recommendation citing anything we didn't send (or another destination's
     // story) is unsupported: drop it, keep the validly sourced ones.
     if (stories.some((story) => !story || story.destinationId !== meta.destinationId)) continue;
+    const title = stripRefs(rec.title);
+    const advice = stripRefs(rec.advice);
+    // Numbers must come from the stories this tip cites — otherwise it's an
+    // invented specific (price, time, distance…), so the tip is dropped.
+    const evidence = stories.map((story) =>
+      [story!.title, story!.place, story!.body, story!.challenge, story!.lesson, story!.advice].filter(Boolean).join(" "),
+    );
+    if (!title || !advice || unsupportedNumbers(`${title} ${advice}`, evidence).length > 0) continue;
     recommendations.push({
       category: rec.category,
-      title: rec.title,
-      advice: rec.advice,
+      title,
+      advice,
       sources: stories.map((story) => ({ id: story!.id, title: story!.title })),
       evidenceCount: refsUsed.length,
       mixedExperiences: rec.mixed_experiences ?? false,
@@ -180,9 +189,11 @@ export function validateRecommendations(
 
   return {
     destinationId: meta.destinationId,
-    overview: output.overview,
+    // The model's free-text overview and limitations aren't tied to sources,
+    // which is exactly where general knowledge slips in, so they're not shown.
+    overview: "",
     recommendations,
-    limitations: output.limitations || undefined,
+    limitations: undefined,
     storyCount: refs.size,
     fromDemo: meta.fromDemo,
     generatedAt: meta.generatedAt,

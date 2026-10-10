@@ -6,12 +6,18 @@ import { z } from "zod";
  * rendered as plain text (React escapes it), never as HTML.
  */
 
-export const COMMENT_LIMITS = { bodyMax: 1000, perStory: 300 } as const;
+export const COMMENT_LIMITS = {
+  bodyMax: 1000,
+  perStory: 500,
+  /** Deepest reply level the database accepts (0 = top-level). */
+  maxDepth: 5,
+} as const;
 
 export type CommentRow = {
   id: string;
   story_id: string;
   parent_id: string | null;
+  depth: number;
   author_name: string;
   body: string;
   status: string;
@@ -19,11 +25,13 @@ export type CommentRow = {
   updated_at: string;
 };
 
-export const COMMENT_COLUMNS = "id, story_id, parent_id, author_name, body, status, created_at, updated_at";
+export const COMMENT_COLUMNS =
+  "id, story_id, parent_id, depth, author_name, body, status, created_at, updated_at";
 
 export type StoryComment = {
   id: string;
   parentId: string | null;
+  depth: number;
   authorName: string;
   /** Empty for a deleted placeholder. */
   body: string;
@@ -34,7 +42,8 @@ export type StoryComment = {
   mine: boolean;
 };
 
-export type CommentThread = StoryComment & { replies: StoryComment[] };
+/** A comment with its replies, which can have replies of their own. */
+export type CommentThread = StoryComment & { replies: CommentThread[] };
 
 /** Normalises untrusted text: no control characters, at most one blank line in a row. */
 export function cleanCommentText(value: string) {
@@ -62,6 +71,7 @@ export function mapComment(row: CommentRow, mine: Set<string>): StoryComment {
   return {
     id: row.id,
     parentId: row.parent_id,
+    depth: row.depth ?? 0,
     authorName: deleted ? "" : row.author_name,
     body: deleted ? "" : row.body,
     deleted,
@@ -73,24 +83,29 @@ export function mapComment(row: CommentRow, mine: Set<string>): StoryComment {
 }
 
 /**
- * Top-level comments (oldest first) with their replies. Replies whose parent
- * isn't visible are dropped, and deleted placeholders without replies too.
+ * Builds the reply tree, oldest first at every level (conversation order).
+ * Replies whose parent isn't visible are dropped. A deleted comment stays as a
+ * placeholder only while something visible still hangs below it.
  */
 export function buildThreads(comments: StoryComment[]): CommentThread[] {
   const sorted = [...comments].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-  const threads = new Map<string, CommentThread>();
-  for (const comment of sorted) {
-    if (comment.parentId === null) threads.set(comment.id, { ...comment, replies: [] });
+  const nodes = new Map<string, CommentThread>();
+  for (const comment of sorted) nodes.set(comment.id, { ...comment, replies: [] });
+
+  const roots: CommentThread[] = [];
+  for (const node of nodes.values()) {
+    if (node.parentId === null) roots.push(node);
+    else nodes.get(node.parentId)?.replies.push(node);
   }
-  for (const comment of sorted) {
-    if (comment.parentId !== null && !comment.deleted) {
-      threads.get(comment.parentId)?.replies.push(comment);
-    }
-  }
-  return [...threads.values()].filter((thread) => !thread.deleted || thread.replies.length > 0);
+
+  const prune = (list: CommentThread[]): CommentThread[] =>
+    list
+      .map((node) => ({ ...node, replies: prune(node.replies) }))
+      .filter((node) => !node.deleted || node.replies.length > 0);
+  return prune(roots);
 }
 
-/** Number of visible comments and replies (placeholders don't count). */
-export function countComments(threads: CommentThread[]) {
-  return threads.reduce((total, t) => total + (t.deleted ? 0 : 1) + t.replies.length, 0);
+/** Visible comments and replies at every level (placeholders don't count). */
+export function countComments(threads: CommentThread[]): number {
+  return threads.reduce((total, t) => total + (t.deleted ? 0 : 1) + countComments(t.replies), 0);
 }

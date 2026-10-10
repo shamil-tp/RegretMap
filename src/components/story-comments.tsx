@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Loader2, MessageCircle, Pencil, Reply, Trash2 } from "lucide-react";
+import { AlertCircle, Loader2, MessageCircle, Minus, Pencil, Plus, Reply, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useState, useTransition } from "react";
@@ -11,7 +11,7 @@ import {
   type CommentActionResult,
 } from "@/app/stories/comment-actions";
 import { buttonClasses } from "@/components/ui/button";
-import { COMMENT_LIMITS, type CommentThread, type StoryComment } from "@/lib/comments";
+import { COMMENT_LIMITS, countComments, type CommentThread, type StoryComment } from "@/lib/comments";
 import { pluralize } from "@/lib/stories";
 
 const dateFormatter = new Intl.DateTimeFormat("en", {
@@ -23,8 +23,8 @@ const dateFormatter = new Intl.DateTimeFormat("en", {
   timeZone: "UTC",
 });
 
-/** Threads longer than this start collapsed behind "View replies". */
-const REPLIES_SHOWN = 2;
+/** Replies shown per level before a "View more replies" button. */
+const REPLIES_PER_LEVEL = 3;
 
 type Props = {
   storyId: string;
@@ -34,9 +34,11 @@ type Props = {
 };
 
 /**
- * Story discussion. Every write goes through a server action that uses the
- * viewer's own session (RLS); the list only changes after the server confirms
- * and the page re-renders with fresh data — no optimistic fake comments.
+ * Story discussion: Reddit-style threads where anyone signed in can reply to
+ * any comment (up to the database's depth limit) and collapse threads.
+ * Every write goes through a server action that uses the viewer's own session
+ * (RLS); the list only changes after the server confirms and the page
+ * re-renders with fresh data — no optimistic fake comments.
  */
 export function StoryComments({ storyId, threads, count, signedIn }: Props) {
   const signInHref = `/auth/sign-in?next=${encodeURIComponent(`/stories/${storyId}#discussion`)}`;
@@ -96,57 +98,96 @@ function ThreadItem({
   signedIn: boolean;
   signInHref: string;
 }) {
+  const [collapsed, setCollapsed] = useState(false);
   const [replying, setReplying] = useState(false);
-  const [expanded, setExpanded] = useState(thread.replies.length <= REPLIES_SHOWN);
-  const visibleReplies = expanded ? thread.replies : thread.replies.slice(0, REPLIES_SHOWN);
+  const [showAll, setShowAll] = useState(thread.replies.length <= REPLIES_PER_LEVEL);
   const repliesId = useId();
+  const visibleReplies = showAll ? thread.replies : thread.replies.slice(0, REPLIES_PER_LEVEL);
+  const canReply = !thread.deleted && thread.depth < COMMENT_LIMITS.maxDepth;
+  const name = thread.deleted ? "deleted comment" : thread.authorName;
+
+  if (collapsed) {
+    const hidden = countComments(thread.replies);
+    return (
+      <li>
+        <button
+          type="button"
+          onClick={() => setCollapsed(false)}
+          aria-expanded={false}
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-line bg-card px-3 text-sm text-ink-muted hover:border-coral hover:text-ink"
+        >
+          <Plus aria-hidden className="size-3.5" />
+          <span className="font-medium text-ink">
+            {thread.deleted ? "Deleted comment" : thread.authorName}
+          </span>
+          {hidden > 0 && <span>· {pluralize(hidden, "reply", "replies")} hidden</span>}
+          <span className="sr-only">(collapsed, select to expand)</span>
+        </button>
+      </li>
+    );
+  }
 
   return (
     <li>
       <CommentCard
         storyId={storyId}
         comment={thread}
-        onReply={thread.deleted ? undefined : () => setReplying((value) => !value)}
+        onReply={canReply ? () => setReplying((value) => !value) : undefined}
         replying={replying}
+        onCollapse={() => setCollapsed(true)}
       />
 
-      {replying &&
-        (signedIn ? (
-          <div className="ml-4 border-l-2 border-strawberry pl-4 sm:ml-6">
-            <CommentForm
-              storyId={storyId}
-              parentId={thread.id}
-              label={`Reply to ${thread.authorName}`}
-              autoFocus
-              onDone={() => setReplying(false)}
-            />
-          </div>
-        ) : (
-          <div className="ml-4 sm:ml-6">
-            <SignInPrompt href={signInHref} compact />
-          </div>
-        ))}
+      {(replying || thread.replies.length > 0) && (
+        <div className="flex">
+          {/* Reddit-style thread line: select it to collapse this thread. */}
+          <button
+            type="button"
+            onClick={() => setCollapsed(true)}
+            aria-label={`Collapse thread from ${name}`}
+            className="group ml-2 flex w-4 shrink-0 justify-center pt-1 sm:ml-3 sm:w-5"
+          >
+            <span className="block h-full w-0.5 rounded-full bg-strawberry group-hover:bg-coral" />
+          </button>
 
-      {thread.replies.length > 0 && (
-        <div className="ml-4 mt-3 border-l-2 border-strawberry pl-4 sm:ml-6">
-          <ul id={repliesId} className="space-y-3" aria-label={`Replies to ${thread.authorName || "a deleted comment"}`}>
-            {visibleReplies.map((reply) => (
-              <li key={reply.id}>
-                <CommentCard storyId={storyId} comment={reply} isReply />
-              </li>
-            ))}
-          </ul>
-          {!expanded && (
-            <button
-              type="button"
-              aria-controls={repliesId}
-              aria-expanded={false}
-              onClick={() => setExpanded(true)}
-              className="mt-2 min-h-10 rounded text-sm font-medium text-accent hover:underline"
-            >
-              View {pluralize(thread.replies.length - REPLIES_SHOWN, "more reply", "more replies")}
-            </button>
-          )}
+          <div className="min-w-0 flex-1 pl-1 sm:pl-2">
+            {replying &&
+              (signedIn ? (
+                <CommentForm
+                  storyId={storyId}
+                  parentId={thread.id}
+                  label={`Reply to ${thread.authorName}`}
+                  autoFocus
+                  onDone={() => setReplying(false)}
+                />
+              ) : (
+                <SignInPrompt href={signInHref} compact />
+              ))}
+
+            {thread.replies.length > 0 && (
+              <ul id={repliesId} className="mt-3 space-y-3" aria-label={`Replies to ${name}`}>
+                {visibleReplies.map((reply) => (
+                  <ThreadItem
+                    key={reply.id}
+                    storyId={storyId}
+                    thread={reply}
+                    signedIn={signedIn}
+                    signInHref={signInHref}
+                  />
+                ))}
+              </ul>
+            )}
+            {!showAll && (
+              <button
+                type="button"
+                aria-controls={repliesId}
+                aria-expanded={false}
+                onClick={() => setShowAll(true)}
+                className="mt-2 min-h-9 rounded text-sm font-medium text-accent hover:underline"
+              >
+                View {pluralize(thread.replies.length - REPLIES_PER_LEVEL, "more reply", "more replies")}
+              </button>
+            )}
+          </div>
         </div>
       )}
     </li>
@@ -156,15 +197,15 @@ function ThreadItem({
 function CommentCard({
   storyId,
   comment,
-  isReply = false,
   onReply,
   replying = false,
+  onCollapse,
 }: {
   storyId: string;
   comment: StoryComment;
-  isReply?: boolean;
   onReply?: () => void;
   replying?: boolean;
+  onCollapse: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -173,7 +214,8 @@ function CommentCard({
 
   if (comment.deleted) {
     return (
-      <div className="rounded-lg border border-dashed border-line px-4 py-3 text-sm italic text-ink-muted">
+      <div className="flex items-center gap-2 rounded-lg border border-dashed border-line px-3 py-2.5 text-sm italic text-ink-muted">
+        <CollapseButton onClick={onCollapse} label="Collapse deleted comment" />
         This comment was deleted.
       </div>
     );
@@ -191,10 +233,13 @@ function CommentCard({
 
   return (
     <article
-      className={`rounded-lg border border-line px-4 py-3 shadow-sm ${isReply ? "bg-canvas" : "bg-card"}`}
+      className={`rounded-lg border border-line px-4 py-3 shadow-sm ${
+        comment.depth === 0 ? "bg-card" : "bg-canvas"
+      }`}
       aria-busy={pending}
     >
       <header className="flex flex-wrap items-center gap-x-2 text-sm">
+        <CollapseButton onClick={onCollapse} label={`Collapse comment from ${comment.authorName}`} />
         <span className="font-semibold text-ink">{comment.authorName}</span>
         {comment.mine && <span className="rounded-full bg-lavender px-2 text-xs text-ink">You</span>}
         <time dateTime={comment.createdAt} className="text-xs text-ink-muted">
@@ -265,6 +310,20 @@ function CommentCard({
   );
 }
 
+function CollapseButton({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      aria-expanded
+      className="-ml-1 inline-grid size-7 shrink-0 place-items-center rounded-full text-ink-muted hover:bg-strawberry hover:text-ink"
+    >
+      <Minus aria-hidden className="size-3.5" />
+    </button>
+  );
+}
+
 function CommentForm({
   storyId,
   parentId = null,
@@ -290,6 +349,7 @@ function CommentForm({
   const router = useRouter();
   const fieldId = useId();
   const editing = Boolean(commentId);
+  const compact = Boolean(parentId) || editing;
   const tooLong = body.length > COMMENT_LIMITS.bodyMax;
 
   function submit(event: React.FormEvent) {
@@ -316,7 +376,7 @@ function CommentForm({
 
   return (
     <form onSubmit={submit} className="mt-3" aria-busy={pending}>
-      <label htmlFor={fieldId} className={parentId || editing ? "sr-only" : "text-sm font-semibold text-ink"}>
+      <label htmlFor={fieldId} className={compact ? "sr-only" : "text-sm font-semibold text-ink"}>
         {label}
       </label>
       <textarea
@@ -327,7 +387,7 @@ function CommentForm({
           setSaved(false);
         }}
         autoFocus={autoFocus}
-        rows={parentId || editing ? 2 : 3}
+        rows={compact ? 2 : 3}
         maxLength={COMMENT_LIMITS.bodyMax + 200}
         placeholder={parentId ? "Write a reply…" : "Share a tip or ask the traveller something…"}
         aria-invalid={tooLong || undefined}

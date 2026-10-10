@@ -37,6 +37,8 @@ export type ChatSource = { id: string; title: string };
 export type ChatActionResult =
   | { status: "answer"; answer: string; sources: ChatSource[]; sufficientEvidence: boolean; fromDemo: boolean }
   | { status: "insufficient"; message: string }
+  /** AI unavailable, but here are the stories most related to the question. */
+  | { status: "fallback"; message: string; sources: ChatSource[] }
   | { status: "error"; message: string; retryable: boolean };
 
 export async function askDestinationQuestion(input: unknown): Promise<ChatActionResult> {
@@ -73,11 +75,19 @@ export async function askDestinationQuestion(input: unknown): Promise<ChatAction
     case "insufficient":
       return {
         status: "insufficient",
-        message: `RegretMap doesn't have enough published stories about ${result.destinationName} yet to answer reliably.`,
+        message: `There aren't any stories about ${result.destinationName} on RegretMap yet, so there's nothing to answer from. Been there? Share your experience and help the next traveller.`,
       };
     case "not_found":
       return { status: "error", retryable: false, message: "This destination couldn't be found." };
     case "unavailable":
+      if (result.reason !== "not_configured" && result.related && result.related.length > 0) {
+        return {
+          status: "fallback",
+          message:
+            "The answer helper is busy right now, so here are the stories most related to your question instead.",
+          sources: result.related,
+        };
+      }
       return {
         status: "error",
         retryable: result.reason !== "not_configured",

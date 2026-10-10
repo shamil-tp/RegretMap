@@ -1,10 +1,6 @@
-import { Sparkles } from "lucide-react";
 import Link from "next/link";
 import { CategoryBadge } from "@/components/category-badge";
 import { Badge } from "@/components/ui/badge";
-
-/** Rotating macaron surfaces so tips read like separate notes. */
-const TIP_SURFACES = ["bg-peach/50", "bg-mint/50", "bg-sky/50", "bg-lavender/50", "bg-butter/50"];
 import { evidenceLabel } from "@/lib/before-you-go";
 import { getDestinationRecommendations } from "@/lib/recommendations/service";
 import {
@@ -37,8 +33,8 @@ export async function AiRecommendations({
   if (result.status === "unavailable") {
     return (
       <Note>
-        The AI summary isn&apos;t available right now. The lessons below are quoted
-        directly from {quotedFrom}.
+        A short summary will appear here once it&apos;s ready. Meanwhile, the lessons
+        below are quoted directly from {quotedFrom}.
       </Note>
     );
   }
@@ -47,19 +43,18 @@ export async function AiRecommendations({
   return (
     <div className="mt-6">
       <div className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
-        <Sparkles aria-hidden className="size-3.5 text-accent" />
         <span>
           Summarised from {pluralize(data.storyCount, "published story", "published stories")}
         </span>
         {data.fromDemo && <Badge tone="demo">Generated from demo example stories</Badge>}
       </div>
-      <p className="mt-3 max-w-3xl leading-relaxed text-ink">{data.overview}</p>
+      {data.overview && <p className="mt-3 max-w-3xl leading-relaxed text-ink">{data.overview}</p>}
 
       <ol className="mt-5 grid gap-4 sm:grid-cols-2">
         {data.recommendations.map((rec, index) => (
           <li
             key={index}
-            className={`rounded-lg border border-line p-5 shadow-sm ${TIP_SURFACES[index % TIP_SURFACES.length]}`}
+            className="rounded-lg border border-line bg-card p-5"
           >
             <div className="flex flex-wrap items-center gap-2">
               <CategoryBadge category={rec.category} />
@@ -94,7 +89,7 @@ export async function AiRecommendations({
 
       {data.limitations && <p className="mt-4 text-sm text-ink-muted">{data.limitations}</p>}
       <p className="mt-4 border-t border-line pt-3 text-xs text-ink-muted">
-        Summarised by AI from{" "}
+        Summarised from{" "}
         {editorialIds.size > 0
           ? "travellers' stories and RegretMap travel notes"
           : "travellers' personal stories"}{" "}

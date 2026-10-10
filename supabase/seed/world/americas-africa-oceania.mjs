@@ -1,0 +1,611 @@
+// RegretMap editorial travel notes — the Americas, Africa and Oceania.
+// Editorial content (stories.source = 'editorial'), not personal experiences.
+// Coordinates are approximate public locations.
+
+/** @type {import("./types.mjs").Country[]} */
+const countries = [
+  {
+    country: "United States",
+    destinations: [
+      {
+        slug: "new-york-city",
+        name: "New York City",
+        region: "New York",
+        at: [40.7128, -74.006],
+        about: "A city of five boroughs, museums, parks and a 24-hour subway.",
+        notes: [
+          {
+            key: "express-local",
+            cat: "transport",
+            title: "Express trains skip stops",
+            place: "Times Square–42nd Street",
+            at: [40.7553, -73.987],
+            body: "Many subway lines run both express and local trains on the same platform. Boarding an express can carry you far past a small station.",
+            lesson: "Check whether your stop is served by express or local trains before you board.",
+          },
+          {
+            key: "tipping",
+            cat: "costs",
+            title: "Budget for tips and sales tax",
+            place: "Manhattan",
+            at: [40.7831, -73.9712],
+            body: "Menu prices in the US usually exclude sales tax, and tipping at sit-down restaurants is expected. The final bill can be noticeably higher than the menu suggested.",
+            lesson: "Add tax and tip to your daily food budget.",
+          },
+        ],
+      },
+      {
+        slug: "grand-canyon-south-rim",
+        name: "Grand Canyon (South Rim)",
+        region: "Arizona",
+        at: [36.0544, -112.1401],
+        about: "The most visited rim of the Grand Canyon, with viewpoints and steep trails down.",
+        notes: [
+          {
+            key: "down-is-easy",
+            cat: "activity",
+            title: "Hiking down is the easy half",
+            place: "Bright Angel Trailhead",
+            at: [36.0576, -112.1435],
+            body: "Trails into the canyon start with the descent, so it's easy to go too far. The climb back out is steep and much hotter, especially in summer.",
+            lesson: "Turn around well before you feel tired, and carry plenty of water and salty snacks.",
+          },
+          {
+            key: "north-rim",
+            cat: "planning",
+            title: "The North Rim is seasonal and far away",
+            place: "South Rim Village",
+            at: [36.0544, -112.1401],
+            body: "The North Rim is open only part of the year and is a long drive around from the South Rim, not a quick hop across.",
+            lesson: "Treat the two rims as separate trips.",
+          },
+        ],
+      },
+      {
+        slug: "yosemite-valley",
+        name: "Yosemite Valley",
+        region: "California",
+        at: [37.7456, -119.5936],
+        about: "A glacier-carved valley of granite walls and waterfalls in Yosemite National Park.",
+        notes: [
+          {
+            key: "reservations",
+            cat: "planning",
+            title: "Check for entry reservations",
+            place: "Yosemite Valley",
+            at: [37.7456, -119.5936],
+            body: "In some recent seasons Yosemite has required advance reservations to drive into the park at busy times. The rules have changed from year to year.",
+            lesson: "Check the National Park Service website for your dates before you travel.",
+          },
+          {
+            key: "tioga-road",
+            cat: "weather",
+            title: "Tioga Road closes in winter",
+            place: "Tioga Road",
+            at: [37.8746, -119.4246],
+            body: "The high Tioga Road across the park closes for snow, usually from late autumn until late spring or early summer.",
+            lesson: "Don't plan a route through the high country outside summer without checking it's open.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    country: "Canada",
+    destinations: [
+      {
+        slug: "banff",
+        name: "Banff",
+        region: "Alberta",
+        at: [51.1784, -115.5708],
+        about: "A mountain town in Banff National Park, near turquoise lakes such as Moraine and Louise.",
+        notes: [
+          {
+            key: "moraine-shuttle",
+            cat: "transport",
+            title: "You can't drive your own car to Moraine Lake",
+            place: "Moraine Lake",
+            at: [51.3217, -116.186],
+            body: "The road to Moraine Lake is closed to private vehicles. Visitors use Parks Canada shuttles or licensed commercial buses, which are often booked ahead.",
+            lesson: "Reserve a shuttle seat early, especially for sunrise.",
+          },
+          {
+            key: "park-pass",
+            cat: "costs",
+            title: "Stopping in the park needs a pass",
+            place: "Banff Avenue",
+            at: [51.1774, -115.5716],
+            body: "A Parks Canada pass is needed to stop anywhere in Banff National Park, including the town.",
+            lesson: "Buy the pass for the number of days you'll be in the park.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    country: "Mexico",
+    destinations: [
+      {
+        slug: "mexico-city",
+        name: "Mexico City",
+        region: "Mexico City",
+        at: [19.4326, -99.1332],
+        about: "Mexico's high-altitude capital, with museums, markets and Aztec ruins nearby.",
+        notes: [
+          {
+            key: "altitude",
+            cat: "activity",
+            title: "The city sits at about 2,240 m",
+            place: "Zócalo",
+            at: [19.4326, -99.1332],
+            body: "Mexico City's altitude can leave visitors short of breath and tired for the first day or two, especially climbing pyramids nearby.",
+            lesson: "Take the first day easy and drink plenty of water.",
+          },
+          {
+            key: "teotihuacan",
+            cat: "planning",
+            title: "Go to Teotihuacan early",
+            place: "Teotihuacan",
+            at: [19.6925, -98.8438],
+            body: "Teotihuacan has very little shade and the sun is strong. Crowds and heat both build from late morning.",
+            lesson: "Arrive at opening time with sun protection and water.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    country: "Peru",
+    destinations: [
+      {
+        slug: "cusco",
+        name: "Cusco",
+        region: "Cusco Region",
+        at: [-13.532, -71.9675],
+        about: "The old Inca capital, high in the Andes and the gateway to Machu Picchu.",
+        notes: [
+          {
+            key: "altitude",
+            cat: "activity",
+            title: "Arrive slowly; Cusco is high",
+            place: "Plaza de Armas",
+            at: [-13.5167, -71.9787],
+            body: "Cusco is at about 3,400 m. Flying in and starting a long walking day straight away is a common recipe for altitude sickness.",
+            lesson: "Rest on arrival, or start in the lower Sacred Valley and go up later.",
+          },
+        ],
+      },
+      {
+        slug: "machu-picchu",
+        name: "Machu Picchu",
+        region: "Cusco Region",
+        at: [-13.1631, -72.545],
+        about: "The Inca citadel above the Urubamba valley, reached via Aguas Calientes.",
+        notes: [
+          {
+            key: "timed-circuits",
+            cat: "planning",
+            title: "Tickets are timed and tied to circuits",
+            place: "Machu Picchu citadel",
+            at: [-13.1631, -72.545],
+            body: "Entry to Machu Picchu is limited per day, with set entry times and fixed walking circuits. Hikes such as Huayna Picchu need separate tickets.",
+            lesson: "Book the ticket and train together, well in advance.",
+          },
+          {
+            key: "bus-queue",
+            cat: "transport",
+            title: "The bus from Aguas Calientes has queues",
+            place: "Aguas Calientes",
+            at: [-13.1547, -72.5254],
+            body: "Buses up to the citadel start early, and morning queues can be long. Missing your entry time can be a problem.",
+            lesson: "Get to the bus stop well before your entry slot.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    country: "Brazil",
+    destinations: [
+      {
+        slug: "rio-de-janeiro",
+        name: "Rio de Janeiro",
+        region: "Rio de Janeiro State",
+        at: [-22.9068, -43.1729],
+        about: "A coastal city between mountains and beaches, overlooked by Christ the Redeemer.",
+        notes: [
+          {
+            key: "clouds",
+            cat: "weather",
+            title: "Check the clouds before going up Corcovado",
+            place: "Christ the Redeemer",
+            at: [-22.9519, -43.2105],
+            body: "The statue on Corcovado is often wrapped in cloud, and on those days there's little view from the top.",
+            lesson: "Look at live webcams or the sky that morning and keep the visit flexible.",
+          },
+          {
+            key: "beach-valuables",
+            cat: "safety",
+            title: "Take little to the beach",
+            place: "Copacabana",
+            at: [-22.9711, -43.1822],
+            body: "Unattended bags and phones on busy beaches are easy to lose. Locals typically bring very little.",
+            lesson: "Bring only what you need and keep it with you.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    country: "Argentina",
+    destinations: [
+      {
+        slug: "el-chalten",
+        name: "El Chaltén",
+        region: "Santa Cruz",
+        at: [-49.3315, -72.8863],
+        about: "A small Patagonian trekking village below Mount Fitz Roy.",
+        notes: [
+          {
+            key: "wind",
+            cat: "weather",
+            title: "Patagonian wind is serious",
+            place: "Laguna de los Tres trail",
+            at: [-49.2715, -73.0434],
+            body: "Strong gusts are common around El Chaltén, especially on exposed ridges. The final climb to Laguna de los Tres can be tough in bad weather.",
+            lesson: "Check the forecast and turn back on exposed sections if the wind picks up.",
+          },
+          {
+            key: "cash",
+            cat: "costs",
+            title: "Bring cash into the village",
+            place: "El Chaltén",
+            at: [-49.3315, -72.8863],
+            body: "El Chaltén is remote, and its few ATMs can run out of cash in busy periods. Card acceptance isn't universal.",
+            lesson: "Arrive with enough cash for your stay.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    country: "Chile",
+    destinations: [
+      {
+        slug: "torres-del-paine",
+        name: "Torres del Paine",
+        region: "Magallanes",
+        at: [-50.9423, -73.4068],
+        about: "A Patagonian national park famous for its granite towers and the W trek.",
+        notes: [
+          {
+            key: "campsite-bookings",
+            cat: "planning",
+            title: "Campsites on the W trek must be booked",
+            place: "Torres del Paine",
+            at: [-50.9423, -73.4068],
+            body: "Overnight stays on the park's main trekking routes require campsite or refugio reservations in advance. Rangers check bookings.",
+            lesson: "Book every night of the route before you arrive.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    country: "Ecuador",
+    destinations: [
+      {
+        slug: "galapagos",
+        name: "Galápagos (Puerto Ayora)",
+        region: "Galápagos Province",
+        at: [-0.7432, -90.3138],
+        about: "Puerto Ayora, on Santa Cruz Island, is the main town of the Galápagos.",
+        notes: [
+          {
+            key: "fees",
+            cat: "costs",
+            title: "Entry involves fees and a transit card",
+            place: "Puerto Ayora",
+            at: [-0.7432, -90.3138],
+            body: "Visitors to the Galápagos pay a national park entrance fee and need a transit control card on arrival. The amounts have changed in recent years.",
+            lesson: "Check the current official fees and bring cash for payments on arrival.",
+          },
+          {
+            key: "wildlife-distance",
+            cat: "local_customs",
+            title: "Keep your distance from wildlife",
+            place: "Tortuga Bay",
+            at: [-0.7608, -90.333],
+            body: "Animals in the Galápagos are often unafraid of people, but park rules require visitors to keep a set distance and never touch or feed them.",
+            lesson: "Follow your guide's lead and keep back.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    country: "Costa Rica",
+    destinations: [
+      {
+        slug: "monteverde",
+        name: "Monteverde",
+        region: "Puntarenas",
+        at: [10.3009, -84.8254],
+        about: "A cloud-forest town known for hanging bridges and wildlife.",
+        notes: [
+          {
+            key: "cool-wet",
+            cat: "packing",
+            title: "The cloud forest is cool and damp",
+            place: "Monteverde Cloud Forest Reserve",
+            at: [10.3021, -84.7951],
+            body: "Monteverde sits high in the mountains and is often misty, windy and cooler than the beaches. Trails can be muddy.",
+            lesson: "Bring a rain jacket, a warm layer and shoes that can get wet.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    country: "Morocco",
+    destinations: [
+      {
+        slug: "marrakech",
+        name: "Marrakech",
+        region: "Marrakech-Safi",
+        at: [31.6295, -7.9811],
+        about: "A red-walled city known for its medina, souks and Jemaa el-Fna square.",
+        notes: [
+          {
+            key: "medina-maze",
+            cat: "transport",
+            title: "The medina is easy to get lost in",
+            place: "Medina",
+            at: [31.6295, -7.9878],
+            body: "The medina's lanes twist and change names, and map apps can be unreliable inside. Offers of directions sometimes come with an expectation of payment.",
+            lesson: "Download an offline map and note big landmarks to navigate by.",
+          },
+          {
+            key: "agree-prices",
+            cat: "costs",
+            title: "Agree prices before services",
+            place: "Jemaa el-Fna",
+            at: [31.6258, -7.9891],
+            body: "In the square and souks, prices for photos with performers, henna or rides are rarely fixed. Disagreements usually happen when nothing was agreed first.",
+            lesson: "Settle the price before accepting any service.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    country: "Egypt",
+    destinations: [
+      {
+        slug: "cairo",
+        name: "Cairo",
+        region: "Cairo Governorate",
+        at: [30.0444, 31.2357],
+        about: "Egypt's capital, beside the Giza pyramids.",
+        notes: [
+          {
+            key: "giza-heat",
+            cat: "weather",
+            title: "Visit Giza early",
+            place: "Giza pyramids",
+            at: [29.9792, 31.1342],
+            body: "The Giza plateau is open desert with little shade. By midday it's hot and much busier.",
+            lesson: "Arrive at opening time with water and sun protection.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    country: "South Africa",
+    destinations: [
+      {
+        slug: "cape-town",
+        name: "Cape Town",
+        region: "Western Cape",
+        at: [-33.9249, 18.4241],
+        about: "A coastal city beneath Table Mountain.",
+        notes: [
+          {
+            key: "cableway-wind",
+            cat: "weather",
+            title: "The Table Mountain cableway stops in wind",
+            place: "Table Mountain Aerial Cableway",
+            at: [-33.948, 18.4031],
+            body: "The cableway closes when it's too windy or cloudy, which happens often. A clear morning can turn into a closure by afternoon.",
+            lesson: "Go on the first clear day rather than saving it for later.",
+          },
+          {
+            key: "hiking-not-alone",
+            cat: "safety",
+            title: "Hike popular trails in company",
+            place: "Lion's Head",
+            at: [-33.9353, 18.3893],
+            body: "Local advice for Table Mountain and Lion's Head is to hike in groups, stay on busy trails and avoid going out late.",
+            lesson: "Hike with others in daylight and tell someone your route.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    country: "Tanzania",
+    destinations: [
+      {
+        slug: "serengeti",
+        name: "Serengeti",
+        region: "Mara Region",
+        at: [-2.3333, 34.8333],
+        about: "A vast savannah national park known for the great wildebeest migration.",
+        notes: [
+          {
+            key: "migration-moves",
+            cat: "planning",
+            title: "The migration moves through the year",
+            place: "Serengeti National Park",
+            at: [-2.3333, 34.8333],
+            body: "The wildebeest herds move around the Serengeti ecosystem with the seasons. Where you stay determines what you'll see.",
+            lesson: "Match your camp's location to the month you travel.",
+          },
+        ],
+      },
+      {
+        slug: "stone-town",
+        name: "Stone Town",
+        region: "Zanzibar",
+        at: [-6.1659, 39.2026],
+        about: "The historic centre of Zanzibar City, with winding lanes and carved doors.",
+        notes: [
+          {
+            key: "modest-dress",
+            cat: "local_customs",
+            title: "Dress modestly in town",
+            place: "Stone Town",
+            at: [-6.1659, 39.2026],
+            body: "Zanzibar is largely conservative. Beachwear is fine on the beach but out of place in Stone Town's streets.",
+            lesson: "Cover shoulders and knees when walking around town.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    country: "Zimbabwe",
+    destinations: [
+      {
+        slug: "victoria-falls",
+        name: "Victoria Falls",
+        region: "Matabeleland North",
+        at: [-17.9243, 25.8572],
+        about: "The town beside the Victoria Falls on the Zambezi.",
+        notes: [
+          {
+            key: "spray",
+            cat: "weather",
+            title: "High water means you'll get soaked",
+            place: "Victoria Falls rainforest",
+            at: [-17.9244, 25.8569],
+            body: "In the high-water months the spray is so heavy that you get drenched and the falls can be hard to see. In the dry season the flow drops a lot on some sections.",
+            lesson: "Choose your month for the experience you want, and bring a raincoat in high water.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    country: "Australia",
+    destinations: [
+      {
+        slug: "sydney",
+        name: "Sydney",
+        region: "New South Wales",
+        at: [-33.8688, 151.2093],
+        about: "A harbour city known for its beaches, ferries and Opera House.",
+        notes: [
+          {
+            key: "flags",
+            cat: "safety",
+            title: "Swim between the flags",
+            place: "Bondi Beach",
+            at: [-33.8915, 151.2767],
+            body: "Patrolled beaches mark the supervised area with red and yellow flags. Rip currents can be strong outside them.",
+            lesson: "Swim only between the flags and follow lifeguard instructions.",
+          },
+          {
+            key: "uv",
+            cat: "packing",
+            title: "The sun burns fast",
+            place: "Sydney Harbour",
+            at: [-33.8568, 151.2153],
+            body: "UV levels in Australia are high, and people burn quickly even on mild or cloudy days.",
+            lesson: "Use sunscreen, a hat and sunglasses every day.",
+          },
+        ],
+      },
+      {
+        slug: "cairns",
+        name: "Cairns",
+        region: "Queensland",
+        at: [-16.9186, 145.7781],
+        about: "A tropical city and gateway to the Great Barrier Reef.",
+        notes: [
+          {
+            key: "stinger-season",
+            cat: "safety",
+            title: "Wear a stinger suit in stinger season",
+            place: "Great Barrier Reef pontoon",
+            at: [-16.75, 146.0],
+            body: "Dangerous jellyfish are more common in tropical waters during the warmer months. Reef operators provide full-body suits.",
+            lesson: "Wear the suit and swim only where operators and signs say it's safe.",
+          },
+        ],
+      },
+      {
+        slug: "uluru",
+        name: "Uluru",
+        region: "Northern Territory",
+        at: [-25.3444, 131.0369],
+        about: "A sacred sandstone monolith in Uluṟu-Kata Tjuṯa National Park.",
+        notes: [
+          {
+            key: "no-climb",
+            cat: "local_customs",
+            title: "Uluru is not climbed",
+            place: "Uluru base walk",
+            at: [-25.3444, 131.0369],
+            body: "Climbing Uluru has been banned since 2019 out of respect for its traditional owners. Some sites around the base also ask visitors not to take photos.",
+            lesson: "Walk the base instead and follow the signs about photography.",
+          },
+          {
+            key: "heat-flies",
+            cat: "packing",
+            title: "Pack for heat and flies",
+            place: "Kata Tjuta",
+            at: [-25.3, 130.7333],
+            body: "Summer days in the Red Centre are very hot, and bush flies are persistent.",
+            lesson: "Walk early, carry lots of water, and pack a fly net.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    country: "New Zealand",
+    destinations: [
+      {
+        slug: "queenstown",
+        name: "Queenstown",
+        region: "Otago",
+        at: [-45.0312, 168.6626],
+        about: "A lakeside adventure town in the Southern Alps.",
+        notes: [
+          {
+            key: "milford-road",
+            cat: "transport",
+            title: "Milford Sound is a very long day from Queenstown",
+            place: "Milford Road",
+            at: [-44.9, 168.1],
+            body: "The road to Milford Sound is long and winding, and it can close for snow or avalanche risk in winter.",
+            lesson: "Stay in Te Anau or take a coach or flight, and check the road status first.",
+          },
+          {
+            key: "weather",
+            cat: "weather",
+            title: "Mountain weather changes quickly",
+            place: "Ben Lomond track",
+            at: [-45.0, 168.6333],
+            body: "Weather in the Southern Alps can shift from sun to cold rain within hours, even in summer.",
+            lesson: "Carry warm and waterproof layers on any hike.",
+          },
+        ],
+      },
+    ],
+  },
+];
+
+export default countries;

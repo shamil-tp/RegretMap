@@ -55,7 +55,7 @@ describe("askDestinationQuestion", () => {
     answerDestinationQuestion.mockResolvedValueOnce({ status: "insufficient", destinationName: "Manali" });
     expect(await askDestinationQuestion({ slug: "manali", question: "Hello there" })).toMatchObject({
       status: "insufficient",
-      message: expect.stringMatching(/enough published stories about Manali/),
+      message: expect.stringMatching(/aren.t any stories about Manali/),
     });
     answerDestinationQuestion.mockResolvedValueOnce({ status: "not_found" });
     expect(await askDestinationQuestion({ slug: "atlantis", question: "Hello there" })).toMatchObject({ status: "error", retryable: false });

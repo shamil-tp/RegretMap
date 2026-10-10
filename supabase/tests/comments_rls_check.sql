@@ -84,12 +84,34 @@ begin
   exception when foreign_key_violation then null;
   end;
 
-  -- Reply to a reply (only one level allowed).
+  -- Replies to replies work up to depth 5, then stop.
+  declare
+    cur uuid := r1;
+    nxt uuid;
   begin
-    insert into public.story_comments (story_id, parent_id, body)
-    values ('00000000-0000-4000-8000-000000000051', r1, 'Too deep');
-    raise exception 'FAIL: nested reply allowed';
-  exception when check_violation then null;
+    for i in 2..5 loop
+      insert into public.story_comments (story_id, parent_id, body)
+      values ('00000000-0000-4000-8000-000000000051', cur, 'Nested reply ' || i)
+      returning id into nxt;
+      cur := nxt;
+    end loop;
+    if (select depth from public.story_comments where id = cur) <> 5 then
+      raise exception 'FAIL: nested reply depth not tracked';
+    end if;
+    begin
+      insert into public.story_comments (story_id, parent_id, body)
+      values ('00000000-0000-4000-8000-000000000051', cur, 'Too deep');
+      raise exception 'FAIL: reply beyond the depth limit allowed';
+    exception when check_violation then null;
+    end;
+  end;
+
+  -- depth can't be supplied by the client.
+  begin
+    insert into public.story_comments (story_id, body, depth)
+    values ('00000000-0000-4000-8000-000000000051', 'Spoof depth', 3);
+    raise exception 'FAIL: depth could be supplied';
+  exception when insufficient_privilege then null;
   end;
 
   -- Empty and oversized bodies.
@@ -119,7 +141,7 @@ begin
   end;
 
   -- Own comment ids helper.
-  if (select count(*) from public.my_story_comment_ids('00000000-0000-4000-8000-000000000051')) <> 2 then
+  if (select count(*) from public.my_story_comment_ids('00000000-0000-4000-8000-000000000051')) <> 6 then
     raise exception 'FAIL: my_story_comment_ids did not return own comments';
   end if;
 end;

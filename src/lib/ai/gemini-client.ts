@@ -4,13 +4,16 @@ import "server-only";
  * The single server-only Gemini client (REST generateContent), shared by
  * moderation and recommendations. Holds a small key pool:
  *
- *  - Keys: GEMINI_API_KEY (primary), then GEMINI_API_KEY2, GEMINI_API_KEY3, …
+ *  - Keys: GEMINI_API_KEY, GEMINI_API_KEY2, GEMINI_API_KEY3, …
  *    (GEMINI_API_KEY_2 style also accepted). Empty values and duplicates are ignored.
- *  - The primary key is tried first; each key at most once per request.
+ *  - Round-robin: each request starts at the next key, spreading quota across
+ *    all keys; each key is tried at most once per request.
  *  - 429 → that key rests for the provider's Retry-After / retryDelay (bounded),
- *    then the next key is tried. 5xx → short rest, next key.
- *    Invalid/forbidden key → long rest, next key.
- *    Malformed request, timeout or network failure → stop (another key won't help).
+ *    then the next key is tried. 5xx / timeout / network → brief rest, next key
+ *    (overload is usually momentary). Invalid/forbidden key → long rest, next key.
+ *    Malformed request (other 4xx) → stop: another key won't help.
+ *  - Optional GEMINI_FALLBACK_MODEL: if every key fails on the main model with
+ *    a temporary error, the fallback model is tried once per available key.
  *  - Rests are in memory, per server instance — not shared across instances.
  *  - Keys never leave the server: not in URLs, logs, errors or return values.
  */
@@ -20,7 +23,8 @@ const MAX_ATTEMPTS_PER_REQUEST = 3;
 const DEFAULT_RATE_LIMIT_REST_MS = 60_000;
 const MIN_REST_MS = 5_000;
 const MAX_REST_MS = 10 * 60_000;
-const UNAVAILABLE_REST_MS = 15_000;
+/** Overload/timeouts are usually momentary and not key-specific: rest briefly. */
+const UNAVAILABLE_REST_MS = 3_000;
 const INVALID_KEY_REST_MS = 10 * 60_000;
 
 export type GeminiError =
@@ -63,17 +67,28 @@ export function geminiKeys(env: NodeJS.ProcessEnv = process.env): string[] {
   return [...new Set(values)];
 }
 
+const MODEL_NAME = /^[a-z0-9.\-]+$/i;
+
 export function geminiModel(env: NodeJS.ProcessEnv = process.env) {
   const model = env.GEMINI_MODEL?.trim();
-  return model && /^[a-z0-9.\-]+$/i.test(model) ? model : null;
+  return model && MODEL_NAME.test(model) ? model : null;
 }
 
-// key index -> time (ms) until which the key rests. Per instance only.
-const restingUntil = new Map<number, number>();
+/** Optional second model tried only when the main one is temporarily failing. */
+export function geminiFallbackModel(env: NodeJS.ProcessEnv = process.env) {
+  const model = env.GEMINI_FALLBACK_MODEL?.trim();
+  return model && MODEL_NAME.test(model) && model !== geminiModel(env) ? model : null;
+}
 
-/** Clears key rest state (tests only). */
+// "model|key index" -> time (ms) until which the key rests for that model.
+// Per instance only.
+const restingUntil = new Map<string, number>();
+let nextStart = 0;
+
+/** Clears key rest and rotation state (tests only). */
 export function resetGeminiKeyState() {
   restingUntil.clear();
+  nextStart = 0;
 }
 
 function log(message: string) {
@@ -107,10 +122,33 @@ export async function generateJson(request: GenerateRequest): Promise<GenerateRe
   const model = geminiModel();
   if (keys.length === 0 || !model) return { ok: false, error: "not_configured" };
 
+  // Round-robin starting key, so load spreads over every key.
+  const start = nextStart % keys.length;
+  nextStart = (start + 1) % keys.length;
+  const order = keys.map((_, i) => (start + i) % keys.length);
+
+  const fallback = geminiFallbackModel();
+  let last: GenerateResult = { ok: false, error: "quota", model };
+  for (const candidate of fallback ? [model, fallback] : [model]) {
+    const result = await tryModel(candidate, keys, order, request);
+    if (result.ok) return result;
+    last = result;
+    // Only temporary failures are worth another model.
+    if (!["quota", "http_5xx", "timeout", "network"].includes(result.error)) return result;
+    if (candidate === model && fallback) log(`main model unavailable (${result.error}); trying fallback model`);
+  }
+  return last;
+}
+
+async function tryModel(
+  model: string,
+  keys: string[],
+  order: number[],
+  request: GenerateRequest,
+): Promise<GenerateResult> {
   const now = Date.now();
-  const available = keys
-    .map((_, index) => index)
-    .filter((index) => (restingUntil.get(index) ?? 0) <= now)
+  const available = order
+    .filter((index) => (restingUntil.get(`${model}|${index}`) ?? 0) <= now)
     .slice(0, MAX_ATTEMPTS_PER_REQUEST);
   if (available.length === 0) return { ok: false, error: "quota", model };
 
@@ -128,6 +166,8 @@ export async function generateJson(request: GenerateRequest): Promise<GenerateRe
 
   let lastError: GeminiError = "quota";
   for (const index of available) {
+    const rest = (ms: number) => restingUntil.set(`${model}|${index}`, Date.now() + ms);
+    const label = `key #${index + 1}`;
     let response: Response;
     try {
       response = await fetch(`${ENDPOINT}/${model}:generateContent`, {
@@ -139,41 +179,44 @@ export async function generateJson(request: GenerateRequest): Promise<GenerateRe
       });
     } catch (error) {
       const isTimeout = error instanceof DOMException && error.name === "TimeoutError";
-      return { ok: false, error: isTimeout ? "timeout" : "network", model };
+      lastError = isTimeout ? "timeout" : "network";
+      rest(UNAVAILABLE_REST_MS);
+      log(`${label} ${lastError}; trying another key`);
+      continue;
     }
 
     if (response.ok) {
       try {
         return { ok: true, data: (await response.json()) as GeminiResponse, model, keyIndex: index };
       } catch {
-        return { ok: false, error: "invalid_response", model };
+        lastError = "invalid_response";
+        continue;
       }
     }
 
     const errorBody: unknown = await response.json().catch(() => null);
-    const label = `key #${index + 1}`;
     if (response.status === 429) {
-      const rest = clamp(retryDelayMs(response, errorBody));
-      restingUntil.set(index, Date.now() + rest);
-      log(`${label} rate-limited; resting ${Math.round(rest / 1000)}s`);
+      const ms = clamp(retryDelayMs(response, errorBody));
+      rest(ms);
+      log(`${label} rate-limited; resting ${Math.round(ms / 1000)}s`);
       lastError = "quota";
       continue;
     }
     if ([500, 502, 503, 504].includes(response.status)) {
-      restingUntil.set(index, Date.now() + UNAVAILABLE_REST_MS);
+      rest(UNAVAILABLE_REST_MS);
       log(`${label} got HTTP ${response.status}; trying another key`);
       lastError = "http_5xx";
       continue;
     }
     if (isKeySpecificFailure(response.status, errorBody)) {
-      restingUntil.set(index, Date.now() + INVALID_KEY_REST_MS);
+      rest(INVALID_KEY_REST_MS);
       log(`${label} rejected (HTTP ${response.status}); check this key`);
       lastError = "auth";
       continue;
     }
     // Malformed request or other client error: another key won't help.
     log(`request rejected (HTTP ${response.status}); not retrying`);
-    return { ok: false, error: response.status >= 500 ? "http_5xx" : "http_4xx", model };
+    return { ok: false, error: "http_4xx", model };
   }
   return { ok: false, error: lastError, model };
 }

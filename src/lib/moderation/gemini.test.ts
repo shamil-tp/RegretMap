@@ -85,10 +85,11 @@ describe("classifyStory", () => {
     expect(await classifyStory(story)).toEqual({ ok: false, error, model: "gemini-test-model" });
   });
 
-  it("maps timeouts and network failures", async () => {
-    fetchMock.mockRejectedValueOnce(new DOMException("timed out", "TimeoutError"));
+  it("maps timeouts and network failures (after trying every key)", async () => {
+    fetchMock.mockRejectedValue(new DOMException("timed out", "TimeoutError"));
     expect(await classifyStory(story)).toMatchObject({ ok: false, error: "timeout" });
-    fetchMock.mockRejectedValueOnce(new TypeError("fetch failed"));
+    resetGeminiKeyState();
+    fetchMock.mockRejectedValue(new TypeError("fetch failed"));
     expect(await classifyStory(story)).toMatchObject({ ok: false, error: "network" });
   });
 
