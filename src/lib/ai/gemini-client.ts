@@ -4,7 +4,7 @@ import "server-only";
  * The single server-only Gemini client (REST generateContent), shared by
  * moderation and recommendations. Holds a small key pool:
  *
- *  - Keys: GEMINI_API_KEY, GEMINI_API_KEY2, GEMINI_API_KEY3, …
+ *  - Keys: GEMINI_API_KEY, GEMINI_API_KEY2, GEMINI_API_KEY3, GEMINI_API_KEY4, …
  *    (GEMINI_API_KEY_2 style also accepted). Empty values and duplicates are ignored.
  *  - Round-robin: each request starts at the next key, spreading quota across
  *    all keys; each key is tried at most once per request.
@@ -19,7 +19,8 @@ import "server-only";
  */
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
-const MAX_ATTEMPTS_PER_REQUEST = 3;
+/** Every configured key gets a chance per request (bounded for very large pools). */
+const MAX_ATTEMPTS_PER_REQUEST = 8;
 const DEFAULT_RATE_LIMIT_REST_MS = 60_000;
 const MIN_REST_MS = 5_000;
 const MAX_REST_MS = 10 * 60_000;

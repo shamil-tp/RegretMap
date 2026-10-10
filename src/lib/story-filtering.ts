@@ -15,7 +15,7 @@ export const defaultStoryFilters: StoryFilterState = {
 };
 
 /** Filters and sorts an already-loaded list of stories (pure; no mutation). */
-export function filterAndSortStories<T extends TravelStory>(
+export function filterAndSortStories<T extends Pick<TravelStory, "category" | "travelMonth" | "publishedAt">>(
   stories: T[],
   filters: StoryFilterState,
 ): T[] {

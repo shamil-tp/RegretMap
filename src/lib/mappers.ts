@@ -3,6 +3,7 @@ import {
   type Coordinates,
   type Destination,
   type StoryCategory,
+  type StorySummary,
   type StoryWithDestination,
 } from "@/lib/stories";
 
@@ -19,8 +20,16 @@ export const STORY_COLUMNS =
   "travel_month, travel_year, challenge, lesson, advice, published_at, is_demo, source, " +
   "destination:destinations!inner(slug, name, region, country)";
 
-/** Same columns for a database without migration 20261011170000 (no `source`). */
-export const STORY_COLUMNS_WITHOUT_SOURCE = STORY_COLUMNS.replace(" source,", "");
+/** Map/filter fields only — no long text — for lists of many stories. */
+export const STORY_SUMMARY_COLUMNS =
+  "id, destination_id, title, category, place_name, latitude, longitude, " +
+  "travel_month, travel_year, published_at, is_demo, source, " +
+  "destination:destinations!inner(slug, name, region, country)";
+
+/** The same columns for a database without migration 20261011170000 (no `source`). */
+export function withoutSource(columns: string) {
+  return columns.replace(" source,", "");
+}
 
 export type DestinationRow = {
   id: string;
@@ -83,21 +92,19 @@ export function mapDestination(row: DestinationRow): Destination {
   };
 }
 
-export function mapStory(row: StoryRow): StoryWithDestination {
+export type StorySummaryRow = Omit<StoryRow, "body" | "challenge" | "lesson" | "advice">;
+
+export function mapStorySummary(row: StorySummaryRow): StorySummary {
   return {
     id: row.id,
     destinationId: row.destination_id,
     title: row.title,
-    body: row.body,
     // The database constrains categories; fall back defensively anyway.
     category: isCategory(row.category) ? row.category : "other",
     place: optional(row.place_name),
     coordinates: coordinates(row.latitude, row.longitude),
     travelMonth: optional(row.travel_month),
     travelYear: optional(row.travel_year),
-    challenge: optional(row.challenge),
-    lesson: optional(row.lesson),
-    advice: optional(row.advice),
     // Published rows always have published_at (DB constraint).
     publishedAt: row.published_at ?? new Date(0).toISOString(),
     isDemo: row.is_demo,
@@ -109,6 +116,16 @@ export function mapStory(row: StoryRow): StoryWithDestination {
       region: optional(row.destination.region),
       country: optional(row.destination.country),
     },
+  };
+}
+
+export function mapStory(row: StoryRow): StoryWithDestination {
+  return {
+    ...mapStorySummary(row),
+    body: row.body,
+    challenge: optional(row.challenge),
+    lesson: optional(row.lesson),
+    advice: optional(row.advice),
   };
 }
 

@@ -98,6 +98,15 @@ say "saved but isn't public yet"; now stories go live immediately.
 - Live check 2026-10-12 (synthetic stories): chat, an adversarial "use your own knowledge" question,
   and recommendations all returned grounded results.
 
+## 2e. Home performance + country filter (2026-10-12)
+
+- Home loads lightweight `listStorySummaries(country?)` (no long text) for map/filters/counts and
+  renders the first 10 cards server-side; `StoryExplorer` fetches further cards 10 at a time via
+  `loadStoryCards` (`src/app/stories/cards-action.ts`, ≤20 ids, published only). Home HTML 699 KB → 383 KB.
+- Country filter: `?country=` (validated against `listCountries()`), `CountryFilter` component;
+  map fits the country, destinations aside filtered; long destination list rendered compactly.
+- Gemini: every configured key (up to 8) is tried per request; `GEMINI_API_KEY4` documented.
+
 ## 3. Owner must still do (remote, manual)
 
 1. **Apply the Phase 10 migration.** It is NOT on Supabase yet; checked 2026-10-11:

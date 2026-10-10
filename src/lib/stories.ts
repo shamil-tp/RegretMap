@@ -71,6 +71,15 @@ export type StoryWithDestination = TravelStory & {
   destination: Pick<Destination, "slug" | "name" | "region" | "country">;
 };
 
+/** A country with published stories, for the Explore page's country filter. */
+export type CountrySummary = { country: string; storyCount: number };
+
+/**
+ * Lightweight story for maps, filters and counts: everything except the long
+ * text fields, which are loaded only for the cards actually shown.
+ */
+export type StorySummary = Omit<StoryWithDestination, "body" | "challenge" | "lesson" | "advice">;
+
 const monthFormatter = new Intl.DateTimeFormat("en", {
   month: "long",
   timeZone: "UTC",

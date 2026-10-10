@@ -1,27 +1,33 @@
 "use client";
 
-import { Info, SearchX } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Info, Loader2, SearchX } from "lucide-react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { loadStoryCards } from "@/app/stories/cards-action";
 import { ExploreMap } from "@/components/map/explore-map";
 import { HeatmapLegend, MapLayerToggle } from "@/components/map/map-layer-controls";
-import { StoryCard } from "@/components/story-card";
+import { StoryCard, StoryCardSkeleton } from "@/components/story-card";
 import { StoryFilters, useStoryFilters } from "@/components/story-filters";
 import { buttonClasses } from "@/components/ui/button";
 import { StateMessage } from "@/components/ui/state-message";
 import { showsHeat, type MapLayers } from "@/lib/heatmap";
 import type { HelpfulState } from "@/lib/helpful";
 import { storiesToMapPoints } from "@/lib/map";
-import type { StoryWithDestination } from "@/lib/stories";
+import type { StorySummary, StoryWithDestination } from "@/lib/stories";
 
-/** Story cards rendered at a time; the map always shows every filtered story. */
-const FEED_PAGE = 20;
+/** Story cards per page; the map always shows every filtered story. */
+const FEED_PAGE = 10;
 
 /**
  * Map + filterable story feed. The same filtered list drives the map pins, the
  * story-density heatmap and the feed, so they always stay consistent.
+ *
+ * `stories` can be lightweight summaries: the full text for each card comes
+ * from `cards` when already known, otherwise it's fetched a page at a time
+ * (10 cards) as the visitor filters or presses "Show more".
  */
 export function StoryExplorer({
   stories,
+  cards = [],
   mapHeading,
   storiesHeading,
   fitMapToStories = false,
@@ -29,7 +35,9 @@ export function StoryExplorer({
   aside,
   helpful,
 }: {
-  stories: StoryWithDestination[];
+  stories: StorySummary[];
+  /** Full stories already loaded on the server (e.g. the first page). */
+  cards?: StoryWithDestination[];
   mapHeading: string;
   storiesHeading: string;
   fitMapToStories?: boolean;
@@ -54,6 +62,42 @@ export function StoryExplorer({
   const highlightedIndex = highlightedId ? visible.findIndex((s) => s.id === highlightedId) : -1;
   const shownCount = Math.max(page.list === visible ? page.count : FEED_PAGE, highlightedIndex + 1);
   const shown = visible.slice(0, shownCount);
+
+  const [cardCache, setCardCache] = useState(() => new Map(cards.map((card) => [card.id, card])));
+  const [helpfulState, setHelpfulState] = useState(helpful);
+  const [loadError, setLoadError] = useState<{ key: string; message: string } | null>(null);
+  const [loadingCards, startLoading] = useTransition();
+  const missing = shown.filter((story) => !cardCache.has(story.id)).map((story) => story.id);
+  const missingKey = missing.join(",");
+
+  useEffect(() => {
+    if (!missingKey || loadingCards || loadError?.key === missingKey) return;
+    startLoading(async () => {
+      const result = await loadStoryCards({ ids: missingKey.split(",") }).catch(() => null);
+      if (!result || result.status !== "ok") {
+        setLoadError({
+          key: missingKey,
+          message: result?.message ?? "Stories couldn't be loaded. Check your connection.",
+        });
+        return;
+      }
+      setLoadError(null);
+      setCardCache((previous) => {
+        const next = new Map(previous);
+        for (const story of result.stories) next.set(story.id, story);
+        return next;
+      });
+      setHelpfulState((previous) =>
+        previous && result.helpful.available
+          ? {
+              ...previous,
+              counts: { ...previous.counts, ...result.helpful.counts },
+              liked: [...new Set([...previous.liked, ...result.helpful.liked])],
+            }
+          : previous,
+      );
+    });
+  }, [missingKey, loadingCards, loadError]);
 
   function showOnMap(id: string) {
     // A single story is found by its pin, so make sure pins are visible.
@@ -126,33 +170,54 @@ export function StoryExplorer({
 
         {visible.length > 0 && (
           <div className="mt-4 space-y-4">
-            {shown.map((story) => (
-              <StoryCard
-                key={story.id}
-                story={story}
-                highlighted={story.id === highlightedId}
-                onShowOnMap={() => showOnMap(story.id)}
-                helpful={
-                  helpful?.available
-                    ? {
-                        storyId: story.id,
-                        count: helpful.counts[story.id] ?? 0,
-                        helpful: helpful.liked.includes(story.id),
-                        signedIn: helpful.signedIn,
-                      }
-                    : undefined
-                }
-              />
-            ))}
+            {shown.map((summary) => {
+              const story = cardCache.get(summary.id);
+              if (!story) return <StoryCardSkeleton key={summary.id} />;
+              return (
+                <StoryCard
+                  key={story.id}
+                  story={story}
+                  highlighted={story.id === highlightedId}
+                  onShowOnMap={() => showOnMap(story.id)}
+                  helpful={
+                    helpfulState?.available
+                      ? {
+                          storyId: story.id,
+                          count: helpfulState.counts[story.id] ?? 0,
+                          helpful: helpfulState.liked.includes(story.id),
+                          signedIn: helpfulState.signedIn,
+                        }
+                      : undefined
+                  }
+                />
+              );
+            })}
           </div>
         )}
+        {loadError?.key === missingKey && missing.length > 0 && (
+          <p role="alert" className="mt-4 flex flex-wrap items-center gap-3 text-sm text-ink">
+            {loadError.message}
+            <button
+              type="button"
+              onClick={() => setLoadError(null)}
+              className="font-medium text-accent hover:underline"
+            >
+              Try again
+            </button>
+          </p>
+        )}
+        <p aria-live="polite" className="sr-only">
+          {loadingCards ? "Loading more stories…" : ""}
+        </p>
         {shown.length < visible.length && (
           <div className="mt-6 flex flex-col items-center gap-1">
             <button
               type="button"
               onClick={() => setPage({ list: visible, count: shownCount + FEED_PAGE })}
+              disabled={loadingCards}
               className={buttonClasses("secondary")}
             >
+              {loadingCards && <Loader2 aria-hidden className="size-4 animate-spin" />}
               Show more stories
             </button>
             <p className="text-xs text-ink-muted">

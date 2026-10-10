@@ -8,20 +8,26 @@ import {
 } from "@/components/data-states";
 import { DestinationSearch } from "@/components/destination-search";
 import { ShareCallout } from "@/components/share-callout";
+import { CountryFilter } from "@/components/country-filter";
 import { StoryExplorer } from "@/components/story-explorer";
 import {
   DataUnavailableError,
   getHelpfulState,
+  getStoriesByIds,
   type DestinationSummary,
-  listAllStories,
+  listCountries,
   listDestinations,
+  listStorySummaries,
 } from "@/lib/data";
+import { defaultStoryFilters, filterAndSortStories } from "@/lib/story-filtering";
 import { getViewer } from "@/lib/supabase/session";
-import { formatLocation, storyNoun } from "@/lib/stories";
+import { formatLocation, pluralize, storyNoun } from "@/lib/stories";
 
 const FEATURED_DESTINATIONS = 10;
+/** Cards rendered on the server; more load 10 at a time from the browser. */
+const FIRST_PAGE = 10;
 
-export default function ExplorePage() {
+export default function ExplorePage({ searchParams }: PageProps<"/">) {
   return (
     <>
       <section className="border-b border-line bg-strawberry/30">
@@ -44,7 +50,7 @@ export default function ExplorePage() {
 
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <Suspense fallback={<ExplorerSkeleton />}>
-          <ExploreContent />
+          <ExploreContent searchParams={searchParams} />
         </Suspense>
       </div>
 
@@ -78,47 +84,89 @@ async function SearchWithDestinations() {
   );
 }
 
-async function ExploreContent() {
-  let destinations, stories;
+async function ExploreContent({ searchParams }: { searchParams: PageProps<"/">["searchParams"] }) {
+  const requested = (await searchParams).country;
+  let destinations, countries, totalCount;
   try {
-    [destinations, stories] = await Promise.all([listDestinations(), listAllStories()]);
+    [destinations, countries] = await Promise.all([listDestinations(), listCountries()]);
+    totalCount = destinations.reduce((sum, d) => sum + d.storyCount, 0);
+  } catch (error) {
+    return renderDataError(error);
+  }
+  // Only a country that actually has stories is accepted from the URL.
+  const country =
+    typeof requested === "string" && countries.some((c) => c.country === requested) ? requested : null;
+
+  let stories, firstPage;
+  try {
+    stories = await listStorySummaries(country ?? undefined);
+    // The first page of cards is rendered on the server; the rest load on demand.
+    const firstIds = filterAndSortStories(stories, defaultStoryFilters)
+      .slice(0, FIRST_PAGE)
+      .map((s) => s.id);
+    firstPage = await getStoriesByIds(firstIds);
   } catch (error) {
     return renderDataError(error);
   }
   if (stories.length === 0) return <NoStoriesYet />;
   const viewer = await getViewer();
-  const helpful = await getHelpfulState(stories.map((s) => s.id), viewer?.id ?? null);
-  // Most-documented destinations first; the rest stay one click away.
-  const byStories = [...destinations].sort(
-    (a, b) => b.storyCount - a.storyCount || a.name.localeCompare(b.name),
-  );
+  const helpful = await getHelpfulState(firstPage.map((s) => s.id), viewer?.id ?? null);
+
+  // Most-documented destinations first (within the chosen country); the rest stay one click away.
+  const byStories = destinations
+    .filter((d) => d.storyCount > 0 && (!country || d.country === country))
+    .sort((a, b) => b.storyCount - a.storyCount || a.name.localeCompare(b.name));
   const featured = byStories.slice(0, FEATURED_DESTINATIONS);
   const rest = byStories.slice(FEATURED_DESTINATIONS);
 
   return (
-    <StoryExplorer
-      stories={stories}
-      mapHeading="Explore the map"
-      storiesHeading="Stories and travel notes"
-      enableLocationPicker
-      helpful={helpful}
-      aside={
-        <>
-          <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-ink-muted">
-            Destinations
-          </h2>
-          <DestinationList destinations={featured} />
-          {rest.length > 0 && (
-            <details className="mt-1">
-              <summary className="cursor-pointer rounded py-2 text-sm font-medium text-accent hover:underline">
-                More destinations ({rest.length})
-              </summary>
-              <DestinationList destinations={rest} />
-            </details>
-          )}
-        </>
-      }
-    />
+    <>
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-card px-4 py-3 shadow-sm">
+        <CountryFilter countries={countries} selected={country} totalCount={totalCount} />
+        <p className="text-sm text-ink-muted">
+          {country ? `${pluralize(stories.length, "story", "stories")} from ${country}` : `${countries.length} countries`}
+        </p>
+      </div>
+      <StoryExplorer
+        key={country ?? "all"}
+        stories={stories}
+        cards={firstPage}
+        mapHeading={country ? `Stories in ${country}` : "Explore the map"}
+        storiesHeading={country ? `Stories and travel notes from ${country}` : "Stories and travel notes"}
+        fitMapToStories={Boolean(country)}
+        enableLocationPicker
+        helpful={helpful}
+        aside={
+          <>
+            <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-ink-muted">
+              Destinations{country ? ` in ${country}` : ""}
+            </h2>
+            <DestinationList destinations={featured} />
+            {rest.length > 0 && (
+              <details className="mt-1">
+                <summary className="cursor-pointer rounded py-2 text-sm font-medium text-accent hover:underline">
+                  More destinations ({rest.length})
+                </summary>
+                {/* Compact on purpose: this list can run to hundreds of places. */}
+                <ul className="flex flex-wrap gap-x-3 gap-y-1.5 pb-2 text-sm">
+                  {rest.map((destination) => (
+                    <li key={destination.slug}>
+                      <Link
+                        href={`/destinations/${destination.slug}`}
+                        prefetch={false}
+                        className="rounded text-ink hover:text-accent-hover hover:underline"
+                      >
+                        {destination.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </>
+        }
+      />
+    </>
   );
 }
 

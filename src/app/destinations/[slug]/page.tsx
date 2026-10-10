@@ -161,6 +161,7 @@ async function DestinationStories({ destination }: { destination: Destination })
       <div className="mx-auto max-w-6xl border-t border-line px-4 py-10 sm:px-6">
         <StoryExplorer
           stories={stories}
+          cards={stories}
           mapHeading="Where these stories happened"
           storiesHeading={`Stories from ${destination.name}`}
           fitMapToStories

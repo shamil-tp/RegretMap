@@ -6,12 +6,15 @@ import {
   isUuid,
   mapDestination,
   mapStory,
+  mapStorySummary,
   STORY_COLUMNS,
-  STORY_COLUMNS_WITHOUT_SOURCE,
+  STORY_SUMMARY_COLUMNS,
+  withoutSource,
+  type StorySummaryRow,
   type DestinationRow,
   type StoryRow,
 } from "@/lib/mappers";
-import type { Destination, StoryWithDestination } from "@/lib/stories";
+import type { CountrySummary, Destination, StorySummary, StoryWithDestination } from "@/lib/stories";
 import type { HelpfulState } from "@/lib/helpful";
 import { getSupabase } from "@/lib/supabase/server";
 import { createSessionClient } from "@/lib/supabase/session";
@@ -32,7 +35,7 @@ export class DataUnavailableError extends Error {
 export type DestinationSummary = Destination & { storyCount: number };
 
 /** Upper bounds until pagination arrives in a later phase. */
-export const STORY_LIMIT = { all: 400, perDestination: 200 } as const;
+export const STORY_LIMIT = { all: 400, perDestination: 200, summaries: 1000, cardsPerRequest: 20 } as const;
 const DESTINATION_LIMIT = 500;
 
 function fail(operation: string, error: unknown): never {
@@ -85,13 +88,14 @@ function isMissingSourceColumn(error: unknown) {
 async function runStories<T>(
   operation: string,
   query: (columns: string) => PromiseLike<{ data: unknown; error: unknown }>,
+  columns: string = STORY_COLUMNS,
 ): Promise<T | null> {
   // Request time only (see run()); this also makes Date.now() safe to call.
   await connection();
   if (Date.now() >= sourceColumnMissingUntil) {
     let result: { data: unknown; error: unknown };
     try {
-      result = await query(STORY_COLUMNS);
+      result = await query(columns);
     } catch (error) {
       fail(operation, error);
     }
@@ -105,7 +109,7 @@ async function runStories<T>(
         "Showing all stories as community stories until then.",
     );
   }
-  return run<T>(operation, () => query(STORY_COLUMNS_WITHOUT_SOURCE));
+  return run<T>(operation, () => query(withoutSource(columns)));
 }
 
 export const listDestinations = cache(async (): Promise<DestinationSummary[]> => {
@@ -166,6 +170,56 @@ export const listAllStories = cache(async (): Promise<StoryWithDestination[]> =>
   );
   return (rows ?? []).map(mapStory);
 });
+
+/**
+ * Lightweight published stories (no long text) for the map, filters and
+ * counts, optionally limited to one country. Cards load their text separately
+ * with getStoriesByIds, a page at a time.
+ */
+export const listStorySummaries = cache(async (country?: string): Promise<StorySummary[]> => {
+  const rows = await runStories<StorySummaryRow[]>(
+    "listStorySummaries",
+    (columns) => {
+      let query = getSupabase()
+        .from("stories")
+        .select(columns)
+        .eq("status", "published")
+        .eq("destination.status", "published");
+      if (country) query = query.eq("destination.country", country);
+      return query.order("published_at", { ascending: false }).limit(STORY_LIMIT.summaries);
+    },
+    STORY_SUMMARY_COLUMNS,
+  );
+  return (rows ?? []).map(mapStorySummary);
+});
+
+/** Full published stories for the given ids (one feed page), in the requested order. */
+export async function getStoriesByIds(ids: string[]): Promise<StoryWithDestination[]> {
+  const wanted = [...new Set(ids)].filter(isUuid).slice(0, STORY_LIMIT.cardsPerRequest);
+  if (wanted.length === 0) return [];
+  const rows = await runStories<StoryRow[]>("getStoriesByIds", (columns) =>
+    getSupabase()
+      .from("stories")
+      .select(columns)
+      .in("id", wanted)
+      .eq("status", "published")
+      .eq("destination.status", "published"),
+  );
+  const byId = new Map((rows ?? []).map((row) => [row.id, mapStory(row)]));
+  return wanted.flatMap((id) => byId.get(id) ?? []);
+}
+
+/** Countries that have published stories, most stories first. */
+export async function listCountries(): Promise<CountrySummary[]> {
+  const totals = new Map<string, number>();
+  for (const destination of await listDestinations()) {
+    if (!destination.country || destination.storyCount === 0) continue;
+    totals.set(destination.country, (totals.get(destination.country) ?? 0) + destination.storyCount);
+  }
+  return [...totals]
+    .map(([country, storyCount]) => ({ country, storyCount }))
+    .sort((a, b) => b.storyCount - a.storyCount || a.country.localeCompare(b.country));
+}
 
 export const getStoryById = cache(async (id: string): Promise<StoryWithDestination | null> => {
   if (!isUuid(id)) return null;

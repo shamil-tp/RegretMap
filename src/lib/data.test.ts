@@ -7,7 +7,7 @@ type Call = [method: string, ...args: unknown[]];
 function fakeQuery(result: { data: unknown; error: unknown } | Error) {
   const calls: Call[] = [];
   const builder: Record<string, unknown> = {};
-  for (const method of ["from", "select", "eq", "order", "limit", "maybeSingle"]) {
+  for (const method of ["from", "select", "eq", "in", "order", "limit", "maybeSingle"]) {
     builder[method] = (...args: unknown[]) => {
       calls.push([method, ...args]);
       return builder;
@@ -175,5 +175,41 @@ describe("stories.source migration not applied yet", () => {
     expect(stories[0].source).toBe("community");
     const legacySelect = legacy.calls.find(([method]) => method === "select")?.[1] as string;
     expect(legacySelect).not.toMatch(/\bsource\b/);
+  });
+});
+
+describe("listStorySummaries", () => {
+  it("selects no long text and filters by country on the server", async () => {
+    const { client, calls } = fakeQuery({ data: [], error: null });
+    getSupabase.mockReturnValue(client);
+    await data.listStorySummaries("Japan");
+    const select = calls.find(([method]) => method === "select")?.[1] as string;
+    expect(select).not.toMatch(/body|lesson|challenge|advice/);
+    expect(calls).toContainEqual(["eq", "status", "published"]);
+    expect(calls).toContainEqual(["eq", "destination.status", "published"]);
+    expect(calls).toContainEqual(["eq", "destination.country", "Japan"]);
+    expect(calls).toContainEqual(["limit", data.STORY_LIMIT.summaries]);
+  });
+});
+
+describe("getStoriesByIds", () => {
+  it("returns published stories in the requested order and ignores invalid ids", async () => {
+    const a = storyRow({ id: "0b6f1c1e-4d1a-4c3e-9a51-6d2f0c8b1a0a", title: "A" });
+    const b = storyRow({ id: "0b6f1c1e-4d1a-4c3e-9a51-6d2f0c8b1a0b", title: "B" });
+    const { client, calls } = fakeQuery({ data: [a, b], error: null });
+    getSupabase.mockReturnValue(client);
+    const stories = await data.getStoriesByIds([b.id, "not-a-uuid", a.id]);
+    expect(stories.map((s) => s.title)).toEqual(["B", "A"]);
+    expect(calls).toContainEqual(["in", "id", [b.id, a.id]]);
+    expect(calls).toContainEqual(["eq", "status", "published"]);
+  });
+
+  it("caps a page at the card limit", async () => {
+    const ids = Array.from({ length: 50 }, (_, i) => `0b6f1c1e-4d1a-4c3e-9a51-${String(i).padStart(12, "0")}`);
+    const { client, calls } = fakeQuery({ data: [], error: null });
+    getSupabase.mockReturnValue(client);
+    await data.getStoriesByIds(ids);
+    const inCall = calls.find(([method]) => method === "in");
+    expect((inCall?.[2] as string[]).length).toBe(data.STORY_LIMIT.cardsPerRequest);
   });
 });

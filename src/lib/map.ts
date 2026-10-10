@@ -2,7 +2,7 @@ import {
   formatLocation,
   type Coordinates,
   type StoryCategory,
-  type StoryWithDestination,
+  type StorySummary,
 } from "@/lib/stories";
 
 /**
@@ -59,7 +59,7 @@ export type MapPoint = {
 export type LatLng = Coordinates;
 
 /** Converts stories with coordinates into the minimal points the map needs. */
-export function storiesToMapPoints(stories: StoryWithDestination[]): MapPoint[] {
+export function storiesToMapPoints(stories: StorySummary[]): MapPoint[] {
   return stories.flatMap((story) =>
     story.coordinates
       ? [

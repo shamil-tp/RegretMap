@@ -27,7 +27,9 @@ type Filters = StoryFilterState;
 const defaultFilters = defaultStoryFilters;
 
 /** Client-side filtering and sorting over an already-loaded list of stories. */
-export function useStoryFilters<T extends TravelStory>(stories: T[]) {
+export function useStoryFilters<T extends Pick<TravelStory, "category" | "travelMonth" | "publishedAt">>(
+  stories: T[],
+) {
   const [filters, setFilters] = useState<Filters>(defaultFilters);
 
   const visible = useMemo(() => filterAndSortStories(stories, filters), [stories, filters]);

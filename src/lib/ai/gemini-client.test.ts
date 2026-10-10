@@ -141,11 +141,20 @@ describe("generateJson key rotation", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("bounds attempts per request even with many keys", async () => {
-    for (let i = 4; i <= 6; i++) vi.stubEnv(`GEMINI_API_KEY${i}`, `extra-${i}-not-real`);
+  it("tries every configured key, including a 4th, before giving up", async () => {
+    vi.stubEnv("GEMINI_API_KEY4", "key-four-not-real");
+    fetchMock.mockImplementation(async (_url: string, init: RequestInit) =>
+      (init.headers as Record<string, string>)["x-goog-api-key"] === "key-four-not-real" ? ok() : status(503),
+    );
+    expect(await generateJson(request)).toMatchObject({ ok: true, keyIndex: 3 });
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it("bounds attempts per request even with a very large key pool", async () => {
+    for (let i = 4; i <= 12; i++) vi.stubEnv(`GEMINI_API_KEY${i}`, `extra-${i}-not-real`);
     fetchMock.mockImplementation(async () => status(503));
     await generateJson(request);
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(8);
   });
 
   it("moves to another key after a timeout or network error", async () => {
