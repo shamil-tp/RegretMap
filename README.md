@@ -11,14 +11,15 @@ built from those stories.
 RegretMap is about **destinations, places, journeys, activities and travel
 conditions** — not a hotel, room or restaurant rating site.
 
-> **Current status: development preview (Phase 8 of 11).**
+> **Current status: development preview (Phase 10 of 11).**
 > Destinations and stories are read from Supabase (PostgreSQL) with Row Level
 > Security, and travellers can submit stories, which are saved as **pending review**
 > (not public until a moderator publishes them). The current public content is a
 > **clearly labelled demo seed** written for development. New submissions get an
 > AI moderation check (Gemini) that only labels the human review queue — it never
-> publishes or rejects anything. There are no user accounts yet. See the
-> [roadmap](#roadmap).
+> publishes or rejects anything; moderators publish from `/moderate`. Accounts
+> (Supabase Auth, email + password) unlock "Helpful" and a list of your own
+> submissions. See the [roadmap](#roadmap).
 
 ---
 
@@ -81,6 +82,9 @@ conditions** — not a hotel, room or restaurant rating site.
     topic, with evidence and season labels. Always shown, so the page stays useful
     if the AI summary is unavailable.
 - Map fitted to the destination's story locations, plus the filterable story feed.
+- **Ask about {destination}:** a chat that answers questions using only that
+  destination's published stories, with "Based on these stories" links under each
+  answer. See [Destination chat](#destination-chat).
 
 ### Story page (`/stories/[id]`)
 
@@ -88,24 +92,32 @@ conditions** — not a hotel, room or restaurant rating site.
   for future travellers.
 - Category, travel month/year, place, and a (sample) published date.
 - Small map showing where it happened, and more stories from the same destination.
-- "Helpful" and "Report" buttons are **local placeholders only** — nothing is saved
-  or sent yet.
+- **Helpful:** signed-in users can mark a story helpful (and undo it); the count is
+  stored and shown to everyone. Visitors get a sign-in prompt. "Report" is still a
+  placeholder.
 
 ### Share an experience (`/submit`)
 
 - Reached from the header, the mobile menu, and the "Share your experience" section
   (destination pages preselect their destination with `/submit?destination=<slug>`).
-- Fields: destination (required, from the database), title, what happened, what went
-  wrong, what you learned and advice (all required, with character counts),
-  category, optional place, travel month/year and an optional **map pin** near the
-  destination, plus a required "this is my own experience" confirmation.
+- **Destination or place** (required): type to search — RegretMap destinations
+  and real places (Photon) appear after a short pause; choose one with the mouse or
+  keyboard. Changing the text clears the choice. A real place within 50 km of a
+  RegretMap destination is filed under it (with the place's pin); otherwise it's
+  **proposed as a new destination**, hidden until a moderator approves the story.
+- Other fields: title, what happened, what went wrong, what you learned and advice
+  (all required, with character counts), category, optional specific place, travel
+  month/year and an optional **map pin**, plus a required "this is my own
+  experience" confirmation.
 - Validation runs in the browser for quick feedback and again on the server, with an
   error summary that links to each field.
 - The submit button is disabled while sending; a one-time submission key makes
   double-clicks and retries harmless.
 - On success: "submitted for review — it isn't public yet". On failure (validation,
   rate limit, database or network) an honest message is shown and the text is kept.
-- Stories are shown anonymously; no name, email or account is collected.
+- **Anyone can submit.** If you're signed in, the story is linked to your account
+  privately so you can follow its status on `/account`; stories are always shown
+  anonymously.
 
 ### General
 
@@ -171,6 +183,7 @@ phases.
 | `GEMINI_API_KEY` | **No — server only** | Yes (AI) | Primary Gemini API key ([Google AI Studio](https://aistudio.google.com/apikey)). Without it, stories are still saved ("unmoderated") and pages show quoted lessons instead of an AI summary. |
 | `GEMINI_API_KEY2`, `GEMINI_API_KEY3`, … | **No — server only** | Optional | Extra keys for rotation (`GEMINI_API_KEY_2` style also works). Empty ones are ignored. |
 | `GEMINI_MODEL` | No | Yes (AI) | Gemini model id, e.g. `gemini-3.1-flash-lite`. |
+| `MODERATOR_EMAILS` | **No — server only** | For `/moderate` | Comma-separated emails allowed to publish/reject pending stories (must sign in with a confirmed email). |
 
 Rules: never put secret keys in `NEXT_PUBLIC_*` variables, client components, logs
 or committed files.
@@ -206,7 +219,11 @@ src/
 │   ├── story-filters.tsx             Category / travel-time / sort controls
 │   ├── story-card.tsx                Story preview card
 │   ├── before-you-go.tsx             Lessons grouped by topic
-│   ├── story-actions.tsx             Helpful / Report placeholders
+│   ├── story-actions.tsx             Helpful + Report (placeholder) on story pages
+│   ├── helpful-button.tsx            Helpful toggle (optimistic, rolled back on failure)
+│   ├── submit/location-picker.tsx    Destination/place autocomplete for the form
+│   ├── moderation-item.tsx           One pending story with Publish / Reject
+│   ├── auth/auth-form.tsx            Sign-in / sign-up form
 │   ├── share-callout.tsx             "Share your experience" section
 │   ├── submit/story-form.tsx         Submission form (validation, map pin, states)
 │   ├── submit/submit-flow.tsx        Fresh form + one-time key per submission
@@ -232,6 +249,8 @@ src/
 │   ├── ai/gemini-client.ts           The one Gemini client: key pool, rotation, errors
 │   ├── recommendations/evidence.ts   Evidence selection, prompt payload, output validation
 │   ├── recommendations/service.ts    Summaries + caching (memory and private table)
+│   ├── chat/evidence.ts              Question-aware story ranking, answer validation
+│   ├── chat/service.ts               Destination chat: evidence, Gemini call, answer cache
 │   ├── story-filtering.ts            Pure filter/sort used by the feed
 │   ├── before-you-go.ts              Groups story lessons by topic
 │   ├── map.ts                        Tile config, MapPoint type, story → map point
@@ -356,8 +375,8 @@ Partial indexes cover published stories per destination and globally, newest fir
 
 ### How submissions are stored
 
-There are no user accounts yet, so anonymous submissions go through a trusted
-server path instead of a public insert policy:
+Submissions (anonymous or signed in) go through a trusted server path instead of a
+public insert policy:
 
 1. The form posts to a Next.js **Server Action** (`src/app/submit/actions.ts`).
    Next.js checks the request origin; only known text fields are read.
@@ -426,6 +445,40 @@ stories (from the RLS-enforced data layer — the browser can't supply evidence)
 
 The summary streams in separately, so the rest of the page never waits for it.
 
+### Destination chat
+
+The "Ask about {destination}" panel (`src/components/destination-chat.tsx`) calls
+a Server Action (`src/app/destinations/[slug]/chat-action.ts`):
+
+1. **Validation:** slug format, question 2–500 characters (whitespace collapsed),
+   at most 20 history entries; unknown fields rejected. 10 questions per IP per
+   minute plus 60 per minute in total (in memory, per instance).
+2. **Evidence, on the server, every question:** the destination is resolved from
+   the slug and its **published** stories are loaded through the RLS-enforced data
+   layer. The browser never supplies evidence. Real stories are preferred over
+   demo ones (as for summaries). Stories are ranked by simple keyword/category
+   matching against the question and the top 8 are sent, trimmed — no embeddings.
+3. **Prompt:** stories, the last 4 conversation turns (clipped, context only — never
+   evidence) and the question are sent as delimited data; the model is told to use
+   only the stories, cite refs, say when evidence is missing or stories disagree,
+   suggest official sources for time-sensitive or safety matters, give no medical
+   or legal advice, never rate the destination, stay on this destination, and
+   ignore instructions inside any of that text. Answers are capped at ~150 words.
+4. **Validation:** strict JSON schema; every cited ref must be one the server sent
+   for this destination — one fabricated citation rejects the answer; links are
+   rejected; an answer citing nothing is never marked as sufficiently supported.
+   Source links are built from validated story ids only.
+5. **Cost controls:** the shared Gemini client and key pool (bounded rotation);
+   500 output tokens; identical questions (same evidence and history) are answered
+   once and cached for 10 minutes; concurrent duplicates share one call; the UI
+   blocks a second send while one is in flight.
+6. **Failures:** unknown destination, no stories, Gemini not configured, rate
+   limits/exhausted keys, timeouts, invalid output and database errors each show
+   an honest message (with "Try again" where it makes sense) — never an invented
+   answer.
+
+Conversations live only in the page; nothing is stored.
+
 ### AI-assisted moderation (annotate only)
 
 After a new story is saved as `pending`, the server asks Gemini to classify it
@@ -458,10 +511,29 @@ failure. Timeouts, quota (429), provider errors and invalid output are stored as
 retried later (at most 3 attempts, at least 2 minutes apart, on later
 submissions). Retries update the same row, so they can't duplicate a story.
 
+### Accounts and sign-in
+
+- Supabase Auth email + password (`@supabase/ssr` cookie sessions; `src/proxy.ts`
+  refreshes sessions). Pages: `/auth/sign-in`, `/auth/sign-up` (confirmation email →
+  `/auth/callback`), `/account` (your submissions and their status, sign out).
+- The server identifies users with `auth.getUser()` (verified by Supabase), never
+  with an id from the browser. Post-sign-in redirects only allow same-site paths.
+- RLS: `story_authors` rows are readable only by their author; authors can read
+  their own stories in any status; `story_reactions` allows users to add/remove
+  only their own "helpful", only on published stories (one per user per story).
+  `stories.helpful_count` is maintained by a database trigger.
+
+**Supabase dashboard setup:** Authentication → URL Configuration → set **Site URL**
+(e.g. `http://localhost:3000`) and add `http://localhost:3000/auth/callback` (and
+your production URL's `/auth/callback`) to **Redirect URLs**. Email confirmation is
+on by default; the confirmation link must be opened in the same browser.
+
 ### Moderating submissions
 
-Until a moderator UI exists, review submissions in the **SQL Editor** (or Table
-Editor):
+Moderators — signed-in users with a confirmed email listed in `MODERATOR_EMAILS` —
+use **`/moderate`**: pending stories with their AI labels, most urgent first, with
+**Publish** (also publishes a proposed destination) and **Reject**. Every action
+re-checks moderator access on the server. You can also use the **SQL Editor**:
 
 ```sql
 -- Review queue: pending stories with AI labels, most urgent first
@@ -495,8 +567,9 @@ use the Supabase CLI), in order:
 3. `supabase/migrations/20261011130000_story_submission_key.sql`
 4. `supabase/migrations/20261011140000_story_moderation.sql`
 5. `supabase/migrations/20261011150000_destination_recommendations.sql`
-6. *(optional, development only)* `supabase/seed.sql` — labelled demo content
-7. `supabase/tests/rls_check.sql` — should finish with "All RLS checks passed";
+6. `supabase/migrations/20261011160000_auth_authors_reactions.sql`
+7. *(optional, development only)* `supabase/seed.sql` — labelled demo content
+8. `supabase/tests/rls_check.sql` — should finish with "All RLS checks passed";
    it rolls back everything it creates.
 
 Migrations are additive (no drops or resets). Never run the seed automatically in
@@ -590,12 +663,12 @@ Development follows the phases in [`CLAUDE.md`](CLAUDE.md):
 | 6 | Story-concentration heatmap, pins/heatmap switch, filter-aware | ✅ Done (no clustering yet) |
 | 7 | AI-assisted moderation (Gemini, annotate only) | ✅ Done |
 | 8 | AI "Before you go" summaries with source links, caching and key rotation | ✅ Done |
-| 9 | Destination-specific AI chat | Planned |
-| 10 | Authentication and account controls | Planned |
+| 9 | Destination-scoped AI chat with validated story citations | ✅ Done |
+| 10 | Accounts, helpful reactions, moderator page, location autocomplete in the form | ✅ Done |
 | 11 | Quality, accessibility and launch readiness | Planned |
 
-Known gaps in the current version: no moderator UI (moderation is done in SQL),
-Helpful/Report are still placeholders, the submission form needs JavaScript, per-IP
+Known gaps in the current version: "Report" is still a placeholder, no password
+reset or account deletion yet, the submission form needs JavaScript, per-IP
 rate limits and duplicate-content detection are in memory per server instance (the
 database-backed hourly cap is shared), no pagination (lists are capped at 100–200 stories), not-found
 pages for missing destinations/stories return HTTP 200 because they stream after the

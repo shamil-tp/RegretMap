@@ -98,6 +98,26 @@ begin
     end;
   end if;
 
+  -- Phase 10: authorship and reactions are not readable or writable anonymously.
+  if to_regclass('public.story_authors') is not null then
+    begin
+      perform 1 from public.story_authors limit 1;
+      raise exception 'FAIL: anon can read story_authors';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+      perform 1 from public.story_reactions limit 1;
+      raise exception 'FAIL: anon can read story_reactions';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+      insert into public.story_reactions (story_id, user_id)
+      values ('00000000-0000-4000-8000-000000000011', '00000000-0000-4000-8000-0000000000aa');
+      raise exception 'FAIL: anon can insert story_reactions';
+    exception when insufficient_privilege then null;
+    end;
+  end if;
+
   raise notice 'All RLS checks passed';
 end;
 $$;

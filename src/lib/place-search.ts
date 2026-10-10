@@ -4,6 +4,8 @@ export type PlaceSuggestion = {
   name: string;
   /** e.g. "Himachal Pradesh, India" */
   context: string;
+  region?: string;
+  country?: string;
   /** OSM feature type, e.g. "town", "beach", "peak". */
   kind: string;
   latitude: number;

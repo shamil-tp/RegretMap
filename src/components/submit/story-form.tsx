@@ -5,6 +5,10 @@ import Link from "next/link";
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { submitStoryAction } from "@/app/submit/actions";
 import { ExploreMap } from "@/components/map/explore-map";
+import {
+  LocationPicker,
+  type LocationValue,
+} from "@/components/submit/location-picker";
 import { buttonClasses } from "@/components/ui/button";
 import {
   EARLIEST_TRAVEL_YEAR,
@@ -15,7 +19,6 @@ import {
   type SubmissionState,
 } from "@/lib/story-submission";
 import {
-  formatLocation,
   formatTravelMonth,
   storyCategories,
   type Coordinates,
@@ -31,10 +34,9 @@ export type SubmittableDestination = {
 };
 
 type TextField = "title" | "body" | "challenge" | "lesson" | "advice" | "place";
-type Values = Record<TextField | "destinationId" | "category" | "travelMonth" | "travelYear", string>;
+type Values = Record<TextField | "category" | "travelMonth" | "travelYear", string>;
 
-const emptyValues = (destinationId = ""): Values => ({
-  destinationId,
+const emptyValues = (): Values => ({
   title: "",
   body: "",
   challenge: "",
@@ -76,7 +78,11 @@ export function StoryForm({
   submissionKey: string;
   onSubmitAnother: () => void;
 }) {
-  const [values, setValues] = useState<Values>(() => emptyValues(initialDestinationId));
+  const [values, setValues] = useState<Values>(() => emptyValues());
+  const [locationValue, setLocationValue] = useState<LocationValue | null>(() => {
+    const initial = destinations.find((d) => d.id === initialDestinationId);
+    return initial ? { type: "destination", destination: initial } : null;
+  });
   const [consent, setConsent] = useState(false);
   const [location, setLocation] = useState<Coordinates | null>(null);
   const [showMap, setShowMap] = useState(false);
@@ -135,7 +141,15 @@ export function StoryForm({
       : {};
   const errors: FieldErrors = clientErrors ?? serverErrors;
   const errorEntries = fieldOrder.filter((field) => errors[field]);
-  const destination = destinations.find((d) => d.id === values.destinationId);
+  // Where the optional map pin starts: the chosen destination or place.
+  const pinCenter =
+    locationValue?.type === "destination"
+      ? locationValue.destination.coordinates
+      : locationValue
+        ? { latitude: locationValue.place.latitude, longitude: locationValue.place.longitude }
+        : undefined;
+  const pinKey =
+    locationValue?.type === "destination" ? locationValue.destination.id : locationValue?.place.id;
 
   useEffect(() => {
     if (state.status === "submitted") successRef.current?.focus();
@@ -156,15 +170,34 @@ export function StoryForm({
     markEdited(field);
   }
 
-  function chooseDestination(id: string) {
-    update("destinationId", id);
+  function chooseLocation(next: LocationValue | null) {
+    setLocationValue(next);
+    // A new location invalidates an earlier map pin.
     setLocation(null);
-    markEdited("latitude");
+    markEdited("destinationId", "latitude");
   }
+
+  /** Hidden form fields describing the chosen location (validated on the server). */
+  const locationFields: Record<string, string> =
+    locationValue?.type === "destination"
+      ? { locationType: "destination", destinationId: locationValue.destination.id }
+      : locationValue
+        ? {
+            locationType: "place",
+            placeName: locationValue.place.name,
+            placeContext: locationValue.place.context,
+            placeRegion: locationValue.place.region ?? "",
+            placeCountry: locationValue.place.country ?? "",
+            placeKind: locationValue.place.kind,
+            placeLatitude: String(locationValue.place.latitude),
+            placeLongitude: String(locationValue.place.longitude),
+          }
+        : {};
 
   function validateBeforeSubmit(event: React.FormEvent<HTMLFormElement>) {
     const result = parseSubmission({
       ...values,
+      ...locationFields,
       latitude: location ? String(location.latitude) : "",
       longitude: location ? String(location.longitude) : "",
       consent: consent ? "on" : undefined,
@@ -193,13 +226,21 @@ export function StoryForm({
           Thanks — your story was submitted for review
         </h2>
         <p className="mx-auto mt-3 max-w-md text-ink-muted">
-          It has been saved but <strong className="text-ink">isn&apos;t public yet</strong>.
-          Once a moderator approves it, it will appear on the {state.destinationName} page.
+          It has been saved but <strong className="text-ink">isn&apos;t public yet</strong>.{" "}
+          {state.proposedDestination
+            ? `Once a moderator approves it, ${state.destinationName} will be added to RegretMap with your story.`
+            : `Once a moderator approves it, it will appear on the ${state.destinationName} page.`}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <Link href={`/destinations/${state.destinationSlug}`} className={buttonClasses("secondary")}>
-            Back to {state.destinationName}
-          </Link>
+          {state.destinationSlug ? (
+            <Link href={`/destinations/${state.destinationSlug}`} className={buttonClasses("secondary")}>
+              Back to {state.destinationName}
+            </Link>
+          ) : (
+            <Link href="/account" className={buttonClasses("secondary")}>
+              Your stories
+            </Link>
+          )}
           <button type="button" onClick={onSubmitAnother} className={buttonClasses("primary")}>
             Share another story
           </button>
@@ -246,6 +287,9 @@ export function StoryForm({
       )}
 
       <input type="hidden" name="submissionKey" value={submissionKey} />
+      {Object.entries(locationFields).map(([name, value]) => (
+        <input key={name} type="hidden" name={name} value={value} />
+      ))}
       <input type="hidden" name="latitude" value={location?.latitude ?? ""} />
       <input type="hidden" name="longitude" value={location?.longitude ?? ""} />
       {/* Honeypot for bots: hidden from people and assistive technology. */}
@@ -257,30 +301,24 @@ export function StoryForm({
       </div>
 
       <Section title="Where">
-        <Field id="destinationId" label="Destination" error={errors.destinationId} required>
+        <Field
+          id="destinationId"
+          label="Destination or place"
+          hint="Start typing and choose a suggestion — a RegretMap destination or any real place."
+          error={errors.destinationId}
+          required
+        >
           {(props) => (
-            <select
-              {...props}
-              name="destinationId"
-              value={values.destinationId}
-              onChange={(e) => chooseDestination(e.target.value)}
-              className={inputClasses}
-            >
-              <option value="">Choose a destination</option>
-              {destinations.map((d) => {
-                const where = formatLocation(d);
-                return (
-                  <option key={d.id} value={d.id}>
-                    {where ? `${d.name} — ${where}` : d.name}
-                  </option>
-                );
-              })}
-            </select>
+            <LocationPicker
+              id={props.id}
+              invalid={props["aria-invalid"]}
+              describedBy={props["aria-describedby"]}
+              destinations={destinations}
+              value={locationValue}
+              onChange={chooseLocation}
+            />
           )}
         </Field>
-        <p className="-mt-2 text-xs text-ink-muted">
-          Only destinations listed on RegretMap can receive stories for now.
-        </p>
 
         <Field
           id="place"
@@ -307,24 +345,20 @@ export function StoryForm({
             <button
               type="button"
               onClick={() => setShowMap(true)}
-              disabled={!destination}
+              disabled={!locationValue}
               className="inline-flex items-center gap-1.5 rounded text-sm font-medium text-accent hover:underline disabled:cursor-not-allowed disabled:text-ink-muted disabled:no-underline"
             >
               <MapPin aria-hidden className="size-4" />
               Add a map pin (optional)
             </button>
           ) : (
-            destination && (
+            locationValue && (
               <div>
                 <p className="mb-2 text-sm font-medium text-ink">Map pin (optional)</p>
                 <ExploreMap
-                  key={destination.id}
+                  key={pinKey}
                   points={[]}
-                  initialView={
-                    destination.coordinates
-                      ? { center: destination.coordinates, zoom: 10 }
-                      : undefined
-                  }
+                  initialView={pinCenter ? { center: pinCenter, zoom: 11 } : undefined}
                   enableLocationPicker
                   location={location}
                   onLocationChange={(next) => {

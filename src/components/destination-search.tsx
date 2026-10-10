@@ -10,49 +10,18 @@ import {
   PLACE_QUERY_MIN,
   type PlaceSuggestion,
 } from "@/lib/place-search";
-import { formatLocation, storyNoun, type Coordinates } from "@/lib/stories";
+import {
+  isSamePlace,
+  matchDestinations,
+  type SearchableDestination,
+} from "@/lib/location-search";
+import { formatLocation, storyNoun } from "@/lib/stories";
 
-export type SearchableDestination = {
-  slug: string;
-  name: string;
-  region?: string;
-  country?: string;
-  storyCount: number;
-  isDemo: boolean;
-  coordinates?: Coordinates;
-};
+export type { SearchableDestination };
 
 type Option =
   | { type: "destination"; destination: SearchableDestination }
   | { type: "place"; place: PlaceSuggestion };
-
-function normalize(value: string) {
-  return value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().trim();
-}
-
-function matchDestinations(destinations: SearchableDestination[], query: string) {
-  const q = normalize(query);
-  if (!q) return [];
-  return destinations
-    .filter((d) =>
-      [d.name, d.region, d.country].some((field) => field && normalize(field).includes(q)),
-    )
-    .sort(
-      (a, b) =>
-        Number(normalize(b.name).startsWith(q)) - Number(normalize(a.name).startsWith(q)),
-    );
-}
-
-/** True when an external place is (roughly) the same as a destination we have. */
-function isSamePlace(place: PlaceSuggestion, destination: SearchableDestination) {
-  if (normalize(place.name) !== normalize(destination.name)) return false;
-  // Without coordinates, a matching name is the best signal available.
-  if (!destination.coordinates) return true;
-  return (
-    Math.abs(place.latitude - destination.coordinates.latitude) < 0.5 &&
-    Math.abs(place.longitude - destination.coordinates.longitude) < 0.5
-  );
-}
 
 /**
  * Destination search with autocomplete. Destinations that have stories are
@@ -249,7 +218,7 @@ export function DestinationSearch({
         <span className="shrink-0 self-center text-xs text-ink-muted">
           {isDestination ? (
             <span className="inline-flex items-center gap-1 text-accent-hover">
-              {storyNoun(option.destination.storyCount, option.destination.isDemo)}
+              {storyNoun(option.destination.storyCount ?? 0, option.destination.isDemo ?? false)}
               <ArrowRight aria-hidden className="size-3.5" />
             </span>
           ) : (

@@ -1,11 +1,11 @@
 "use client";
 
-import { Flag, ThumbsUp } from "lucide-react";
+import { Flag } from "lucide-react";
 import { useState } from "react";
+import { HelpfulButton, type HelpfulProps } from "@/components/helpful-button";
 
-/** Local-only placeholders: nothing here is saved or sent anywhere yet. */
-export function StoryActions({ isDemo }: { isDemo: boolean }) {
-  const [helpful, setHelpful] = useState(false);
+/** Helpful (saved, signed-in users) and Report (placeholder, nothing sent yet). */
+export function StoryActions({ isDemo, helpful }: { isDemo: boolean; helpful?: HelpfulProps }) {
   const [reportOpen, setReportOpen] = useState(false);
 
   const buttonClasses =
@@ -14,19 +14,7 @@ export function StoryActions({ isDemo }: { isDemo: boolean }) {
   return (
     <div>
       <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          aria-pressed={helpful}
-          onClick={() => setHelpful((value) => !value)}
-          className={`${buttonClasses} ${
-            helpful
-              ? "border-accent bg-accent-soft text-accent-hover"
-              : "border-line text-ink-muted hover:text-ink"
-          }`}
-        >
-          <ThumbsUp aria-hidden className="size-4" />
-          Helpful
-        </button>
+        {helpful && <HelpfulButton {...helpful} />}
         <button
           type="button"
           aria-expanded={reportOpen}
@@ -38,9 +26,6 @@ export function StoryActions({ isDemo }: { isDemo: boolean }) {
           Report
         </button>
       </div>
-      <p aria-live="polite" className="mt-2 min-h-5 text-xs text-ink-muted">
-        {helpful && "Marked on this page only — reactions aren't saved yet."}
-      </p>
       {reportOpen && (
         <p id="report-note" className="text-sm text-ink-muted">
           Reporting isn&apos;t available yet.{" "}

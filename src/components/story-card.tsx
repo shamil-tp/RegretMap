@@ -1,5 +1,6 @@
 import { ArrowRight, MapPin, Navigation } from "lucide-react";
 import Link from "next/link";
+import { HelpfulButton, type HelpfulProps } from "@/components/helpful-button";
 import { Badge } from "@/components/ui/badge";
 import {
   formatPublishedDate,
@@ -12,9 +13,12 @@ export function StoryCard({
   story,
   highlighted = false,
   onShowOnMap,
+  helpful,
 }: {
   story: StoryWithDestination;
   highlighted?: boolean;
+  /** Helpful button state; omitted when likes are unavailable. */
+  helpful?: HelpfulProps;
   /** When provided and the story has coordinates, shows a "Show on map" action. */
   onShowOnMap?: () => void;
 }) {
@@ -77,6 +81,7 @@ export function StoryCard({
             Show on map
           </button>
         )}
+        {helpful && <HelpfulButton {...helpful} />}
         <span className="text-ink-muted sm:ml-auto">
           {story.isDemo ? "Sample date" : "Published"}{" "}
           {formatPublishedDate(story.publishedAt)}

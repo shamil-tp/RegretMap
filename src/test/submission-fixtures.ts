@@ -4,6 +4,7 @@ export const SUBMISSION_KEY = "9d7f2a3b-1c4e-4f5a-8b6c-7d8e9f0a1b2c";
 /** A valid raw submission, as the form would send it (all strings). */
 export function validInput(overrides: Record<string, string | undefined> = {}) {
   const input: Record<string, string | undefined> = {
+    locationType: "destination",
     destinationId: DESTINATION_ID,
     title: "The bus left earlier than listed",
     body: "I arrived at the stop ten minutes before the listed time and the last bus had already gone.",

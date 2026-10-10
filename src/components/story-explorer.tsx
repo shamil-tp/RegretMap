@@ -8,6 +8,7 @@ import { StoryCard } from "@/components/story-card";
 import { StoryFilters, useStoryFilters } from "@/components/story-filters";
 import { StateMessage } from "@/components/ui/state-message";
 import { showsHeat, type MapLayers } from "@/lib/heatmap";
+import type { HelpfulState } from "@/lib/helpful";
 import { storiesToMapPoints } from "@/lib/map";
 import type { StoryWithDestination } from "@/lib/stories";
 
@@ -22,6 +23,7 @@ export function StoryExplorer({
   fitMapToStories = false,
   enableLocationPicker = false,
   aside,
+  helpful,
 }: {
   stories: StoryWithDestination[];
   mapHeading: string;
@@ -30,6 +32,8 @@ export function StoryExplorer({
   enableLocationPicker?: boolean;
   /** Extra content shown under the map. */
   aside?: React.ReactNode;
+  /** Helpful counts and the viewer's own reactions. */
+  helpful?: HelpfulState;
 }) {
   const { visible, ...filterState } = useStoryFilters(stories);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
@@ -118,6 +122,16 @@ export function StoryExplorer({
                 story={story}
                 highlighted={story.id === highlightedId}
                 onShowOnMap={() => showOnMap(story.id)}
+                helpful={
+                  helpful?.available
+                    ? {
+                        storyId: story.id,
+                        count: helpful.counts[story.id] ?? 0,
+                        helpful: helpful.liked.includes(story.id),
+                        signedIn: helpful.signedIn,
+                      }
+                    : undefined
+                }
               />
             ))}
           </div>

@@ -17,6 +17,8 @@ export const SUBMISSION_LIMITS = {
 
 export const EARLIEST_TRAVEL_YEAR = 1950;
 
+const LOCATION_REQUIRED = "Choose a destination or place from the suggestions.";
+
 /** Trims, normalises line endings and collapses runs of blank lines. */
 export function normalizeText(value: string) {
   return value
@@ -50,7 +52,17 @@ const categoryValues = Object.keys(storyCategories) as [StoryCategory, ...StoryC
 
 export const storySubmissionSchema = z
   .object({
-    destinationId: z.uuid("Choose a destination."),
+    // Location: an existing RegretMap destination, or a real-world place chosen
+    // from the suggestions (attached to a nearby destination or proposed).
+    locationType: z.enum(["destination", "place"], { error: LOCATION_REQUIRED }),
+    destinationId: optional(z.uuid(LOCATION_REQUIRED)),
+    placeName: optional(z.string().transform(normalizeText).pipe(z.string().min(1).max(120))),
+    placeContext: optional(z.string().transform(normalizeText).pipe(z.string().max(200))),
+    placeRegion: optional(z.string().transform(normalizeText).pipe(z.string().max(120))),
+    placeCountry: optional(z.string().transform(normalizeText).pipe(z.string().max(120))),
+    placeKind: optional(z.string().transform(normalizeText).pipe(z.string().max(40))),
+    placeLatitude: optional(z.coerce.number().min(-90).max(90)),
+    placeLongitude: optional(z.coerce.number().min(-180).max(180)),
     title: text("Title", SUBMISSION_LIMITS.title),
     body: text("What happened", SUBMISSION_LIMITS.body),
     challenge: text("What went wrong", SUBMISSION_LIMITS.challenge),
@@ -82,6 +94,15 @@ export const storySubmissionSchema = z
   })
   .strict()
   .superRefine((value, ctx) => {
+    if (value.locationType === "destination" && !value.destinationId) {
+      ctx.addIssue({ code: "custom", path: ["destinationId"], message: LOCATION_REQUIRED });
+    }
+    if (
+      value.locationType === "place" &&
+      (!value.placeName || value.placeLatitude === undefined || value.placeLongitude === undefined)
+    ) {
+      ctx.addIssue({ code: "custom", path: ["destinationId"], message: LOCATION_REQUIRED });
+    }
     if ((value.latitude === undefined) !== (value.longitude === undefined)) {
       ctx.addIssue({ code: "custom", path: ["latitude"], message: "Pick a location on the map." });
     }
@@ -119,4 +140,10 @@ export type SubmissionState =
   | { status: "idle" }
   | { status: "invalid"; fieldErrors: FieldErrors; message: string }
   | { status: "error"; message: string }
-  | { status: "submitted"; destinationName: string; destinationSlug: string };
+  | {
+      status: "submitted";
+      destinationName: string;
+      /** Null for a proposed destination (not public until approved). */
+      destinationSlug: string | null;
+      proposedDestination: boolean;
+    };

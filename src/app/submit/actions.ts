@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { after } from "next/server";
 import { clientIp, createRateLimiter } from "@/lib/rate-limit";
@@ -10,6 +11,7 @@ import {
 } from "@/lib/story-submission";
 import { moderateStory, retryPendingModerations } from "@/lib/moderation/service";
 import { submitStory } from "@/lib/submissions";
+import { getViewer } from "@/lib/supabase/session";
 
 /** Accepted submissions per IP: 5 per 10 minutes (in memory, per instance). */
 const submitLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 5 });
@@ -20,7 +22,15 @@ const submitLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 5 });
 const globalSubmitLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30 });
 
 const FIELDS = [
+  "locationType",
   "destinationId",
+  "placeName",
+  "placeContext",
+  "placeRegion",
+  "placeCountry",
+  "placeKind",
+  "placeLatitude",
+  "placeLongitude",
   "title",
   "body",
   "challenge",
@@ -76,7 +86,9 @@ export async function submitStoryAction(
     };
   }
 
-  const result = await submitStory(parsed.data);
+  // Hybrid: anyone may submit; a signed-in author is linked privately.
+  const viewer = await getViewer();
+  const result = await submitStory(parsed.data, { authorId: viewer?.id });
   if (result.ok) {
     const storyId = result.storyId;
     if (storyId) {
@@ -91,10 +103,12 @@ export async function submitStoryAction(
         }
       });
     }
+    if (viewer) revalidatePath("/account");
     return {
       status: "submitted",
       destinationName: result.destination.name,
       destinationSlug: result.destination.slug,
+      proposedDestination: result.proposedDestination,
     };
   }
 
@@ -102,7 +116,7 @@ export async function submitStoryAction(
     case "invalid_destination":
       return {
         status: "invalid",
-        fieldErrors: { destinationId: "This destination isn't available. Choose another." },
+        fieldErrors: { destinationId: "This location isn't available. Choose another from the suggestions." },
         message: "Please fix the highlighted fields.",
       };
     case "location_too_far":

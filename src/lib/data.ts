@@ -11,7 +11,9 @@ import {
   type StoryRow,
 } from "@/lib/mappers";
 import type { Destination, StoryWithDestination } from "@/lib/stories";
+import type { HelpfulState } from "@/lib/helpful";
 import { getSupabase } from "@/lib/supabase/server";
+import { createSessionClient } from "@/lib/supabase/session";
 
 /*
  * Data-access layer: the only place the app reads destinations and stories.
@@ -149,3 +151,44 @@ export const getDestinationById = cache(async (id: string): Promise<Destination 
   );
   return row ? mapDestination(row) : null;
 });
+
+/**
+ * Helpful counts (public, trigger-maintained column) and the viewer's own
+ * reactions (RLS: own rows only). Failures degrade to "unavailable" instead of
+ * breaking the page.
+ */
+export async function getHelpfulState(
+  storyIds: string[],
+  viewerId: string | null,
+): Promise<HelpfulState> {
+  const ids = [...new Set(storyIds)].filter(isUuid).slice(0, 300);
+  const empty: HelpfulState = { available: false, counts: {}, liked: [], signedIn: Boolean(viewerId) };
+  if (ids.length === 0) return { ...empty, available: true };
+  try {
+    await connection();
+    const { data, error } = await getSupabase()
+      .from("stories")
+      .select("id, helpful_count")
+      .in("id", ids);
+    if (error) throw new Error(error.code ?? error.message);
+    const counts = Object.fromEntries(
+      (data as { id: string; helpful_count: number }[]).map((row) => [row.id, row.helpful_count]),
+    );
+
+    let liked: string[] = [];
+    if (viewerId) {
+      const client = await createSessionClient();
+      const own = await client
+        .from("story_reactions")
+        .select("story_id")
+        .eq("reaction_type", "helpful")
+        .in("story_id", ids);
+      if (own.error) throw new Error(own.error.code ?? own.error.message);
+      liked = (own.data as { story_id: string }[]).map((row) => row.story_id);
+    }
+    return { available: true, counts, liked, signedIn: Boolean(viewerId) };
+  } catch (error) {
+    console.error(`[data] getHelpfulState failed: ${error instanceof Error ? error.message : "unknown"}`);
+    return empty;
+  }
+}

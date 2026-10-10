@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { AiRecommendations, AiRecommendationsSkeleton } from "@/components/ai-recommendations";
 import { BeforeYouGo } from "@/components/before-you-go";
+import { DestinationChat } from "@/components/destination-chat";
 import {
   ExplorerSkeleton,
   NoStoriesYet,
@@ -13,7 +14,8 @@ import { ShareCallout } from "@/components/share-callout";
 import { StoryExplorer } from "@/components/story-explorer";
 import { Badge } from "@/components/ui/badge";
 import { buildBeforeYouGo } from "@/lib/before-you-go";
-import { getDestinationBySlug, listStoriesForDestination } from "@/lib/data";
+import { getDestinationBySlug, getHelpfulState, listStoriesForDestination } from "@/lib/data";
+import { getViewer } from "@/lib/supabase/session";
 import { formatLocation, storyNoun, type Destination } from "@/lib/stories";
 
 type Props = PageProps<"/destinations/[slug]">;
@@ -131,6 +133,8 @@ async function DestinationStories({ destination }: { destination: Destination })
 
   const months = stories.flatMap((s) => (s.travelMonth ? [s.travelMonth] : []));
   const hasDemo = stories.some((s) => s.isDemo);
+  const viewer = await getViewer();
+  const helpful = await getHelpfulState(stories.map((s) => s.id), viewer?.id ?? null);
 
   return (
     <>
@@ -160,7 +164,12 @@ async function DestinationStories({ destination }: { destination: Destination })
           mapHeading="Where these stories happened"
           storiesHeading={`Stories from ${destination.name}`}
           fitMapToStories
+          helpful={helpful}
         />
+      </div>
+
+      <div className="mx-auto max-w-3xl px-4 pb-12 sm:px-6">
+        <DestinationChat slug={destination.slug} destinationName={destination.name} />
       </div>
     </>
   );

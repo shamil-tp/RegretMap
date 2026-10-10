@@ -9,9 +9,11 @@ import { StoryActions } from "@/components/story-actions";
 import { Badge } from "@/components/ui/badge";
 import {
   DataUnavailableError,
+  getHelpfulState,
   getStoryById,
   listStoriesForDestination,
 } from "@/lib/data";
+import { getViewer } from "@/lib/supabase/session";
 import { storiesToMapPoints } from "@/lib/map";
 import {
   formatPublishedDate,
@@ -86,6 +88,8 @@ async function StoryContent({ params }: Pick<Props, "params">) {
 
   const travelDate = formatTravelDate(story);
   const point = storiesToMapPoints([story]);
+  const viewer = await getViewer();
+  const helpful = await getHelpfulState([story.id], viewer?.id ?? null);
 
   return (
     <>
@@ -147,7 +151,19 @@ async function StoryContent({ params }: Pick<Props, "params">) {
           </p>
 
           <div className="mt-6">
-            <StoryActions isDemo={story.isDemo} />
+            <StoryActions
+              isDemo={story.isDemo}
+              helpful={
+                helpful.available
+                  ? {
+                      storyId: story.id,
+                      count: helpful.counts[story.id] ?? 0,
+                      helpful: helpful.liked.includes(story.id),
+                      signedIn: helpful.signedIn,
+                    }
+                  : undefined
+              }
+            />
           </div>
         </article>
 

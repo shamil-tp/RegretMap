@@ -74,6 +74,8 @@ function toSuggestion(feature: PhotonFeature): PlaceSuggestion | null {
     id: `${p.osm_type ?? "x"}${p.osm_id ?? `${latitude},${longitude}`}`,
     name: p.name,
     context: [region !== p.name ? region : undefined, p.country].filter(Boolean).join(", "),
+    region: region && region !== p.name ? region : undefined,
+    country: p.country,
     // Some features are tagged like mountain_pass=yes; use the key then.
     kind: (p.osm_value && p.osm_value !== "yes" ? p.osm_value : (p.osm_key ?? "place")).replaceAll("_", " "),
     latitude,

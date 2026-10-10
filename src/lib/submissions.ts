@@ -1,6 +1,11 @@
 import "server-only";
 import { createHash } from "node:crypto";
-import { DataUnavailableError, getDestinationById } from "@/lib/data";
+import {
+  DataUnavailableError,
+  getDestinationById,
+  listDestinations,
+} from "@/lib/data";
+import { distanceKm, nearestWithin } from "@/lib/geo";
 import type { StorySubmission } from "@/lib/story-submission";
 import type { Coordinates } from "@/lib/stories";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -10,10 +15,20 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
  * storySubmissionSchema. Whatever the browser sends, new stories are always
  * stored as status = 'pending' (not public) and is_demo = false. This module
  * uses the privileged client and must only be called from server code.
+ *
+ * Location: either an existing published destination, or a real-world place
+ * chosen from the suggestions. A place within ATTACH_RADIUS_KM of a published
+ * destination is attached to it (the place becomes the story's place name and
+ * pin); otherwise a DRAFT destination is proposed — hidden until a moderator
+ * publishes the story.
  */
 
-/** A map pin must be within this distance of the chosen destination. */
+/** A map pin must be within this distance of the story's location. */
 export const MAX_PIN_DISTANCE_KM = 200;
+/** A selected place this close to a published destination is filed under it. */
+export const ATTACH_RADIUS_KM = 50;
+/** A proposal this close to an existing draft with the same name reuses it. */
+const PROPOSAL_REUSE_KM = 25;
 
 /** Identical stories within this window are treated as accidental duplicates. */
 const DUPLICATE_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -27,7 +42,9 @@ export const MAX_PENDING_PER_HOUR = 60;
 export type SubmitResult =
   | {
       ok: true;
-      destination: { name: string; slug: string };
+      destination: { name: string; slug: string | null };
+      /** True when the story created/uses a proposed (draft) destination. */
+      proposedDestination: boolean;
       /** Set only when a new story row was created (not for a repeated submit). */
       storyId?: string;
     }
@@ -41,51 +58,161 @@ export type SubmitResult =
         | "unavailable";
     };
 
-export function distanceKm(a: Coordinates, b: Coordinates) {
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const dLat = toRad(b.latitude - a.latitude);
-  const dLon = toRad(b.longitude - a.longitude);
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(a.latitude)) * Math.cos(toRad(b.latitude)) * Math.sin(dLon / 2) ** 2;
-  return 2 * 6371 * Math.asin(Math.sqrt(h));
-}
+export { distanceKm };
 
 // fingerprint -> { submissionKey, at }. In memory, per instance (see rate-limit.ts).
 const recentSubmissions = new Map<string, { submissionKey: string; at: number }>();
-
-function fingerprint(input: StorySubmission) {
-  return createHash("sha256")
-    .update([input.destinationId, input.title, input.body].join("\u0000").toLowerCase())
-    .digest("hex");
-}
 
 /** Clears duplicate-detection memory (tests only). */
 export function resetSubmissionMemory() {
   recentSubmissions.clear();
 }
 
-export async function submitStory(input: StorySubmission): Promise<SubmitResult> {
-  let destination;
+type LocationPlan =
+  | {
+      kind: "existing";
+      destination: { id: string; name: string; slug: string; coordinates?: Coordinates };
+      placeName?: string;
+      placeCoordinates?: Coordinates;
+    }
+  | { kind: "propose"; name: string; region?: string; country?: string; coordinates: Coordinates };
+
+async function planLocation(input: StorySubmission): Promise<LocationPlan | "invalid" | "unavailable"> {
   try {
-    destination = await getDestinationById(input.destinationId);
+    if (input.locationType === "destination") {
+      const destination = input.destinationId ? await getDestinationById(input.destinationId) : null;
+      return destination ? { kind: "existing", destination } : "invalid";
+    }
+    if (!input.placeName || input.placeLatitude === undefined || input.placeLongitude === undefined) {
+      return "invalid";
+    }
+    const coordinates = { latitude: input.placeLatitude, longitude: input.placeLongitude };
+    const nearest = nearestWithin(await listDestinations(), coordinates, ATTACH_RADIUS_KM);
+    if (nearest) {
+      return {
+        kind: "existing",
+        destination: nearest.item,
+        placeName: input.placeName,
+        placeCoordinates: coordinates,
+      };
+    }
+    return {
+      kind: "propose",
+      name: input.placeName,
+      region: input.placeRegion,
+      country: input.placeCountry,
+      coordinates,
+    };
   } catch (error) {
-    if (error instanceof DataUnavailableError) return { ok: false, reason: "unavailable" };
+    if (error instanceof DataUnavailableError) return "unavailable";
     throw error;
   }
-  if (!destination) return { ok: false, reason: "invalid_destination" };
-  const accepted = { ok: true as const, destination: { name: destination.name, slug: destination.slug } };
+}
+
+export function slugify(name: string) {
+  const slug = name
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60)
+    .replace(/-+$/g, "");
+  return slug || "place";
+}
+
+/** Reuses a nearby draft with the same name, or creates a new draft destination. */
+async function findOrCreateProposal(
+  plan: Extract<LocationPlan, { kind: "propose" }>,
+): Promise<{ id: string; name: string } | null> {
+  const admin = getSupabaseAdmin();
+  const { data: drafts, error: lookupError } = await admin
+    .from("destinations")
+    .select("id, name, latitude, longitude")
+    .eq("status", "draft")
+    .ilike("name", plan.name.replace(/[%_]/g, "\\$&"))
+    .limit(20);
+  if (lookupError) {
+    console.error(`[submissions] proposal lookup failed: ${lookupError.code ?? "unknown"}`);
+    return null;
+  }
+  const reuse = (drafts as { id: string; name: string; latitude: number | null; longitude: number | null }[])
+    .find(
+      (d) =>
+        d.latitude != null &&
+        d.longitude != null &&
+        distanceKm(plan.coordinates, { latitude: d.latitude, longitude: d.longitude }) <= PROPOSAL_REUSE_KM,
+    );
+  if (reuse) return { id: reuse.id, name: reuse.name };
+
+  const base = slugify(plan.name);
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const slug =
+      attempt === 0 ? base : attempt < 5 ? `${base}-${attempt + 1}` : `${base}-${createHash("sha1").update(`${Date.now()}`).digest("hex").slice(0, 6)}`;
+    const { data, error } = await admin
+      .from("destinations")
+      .insert({
+        slug,
+        name: plan.name,
+        region: plan.region ?? null,
+        country: plan.country ?? null,
+        description: null,
+        latitude: plan.coordinates.latitude,
+        longitude: plan.coordinates.longitude,
+        // Hidden until a moderator publishes a story for it.
+        status: "draft",
+        is_demo: false,
+      })
+      .select("id, name")
+      .single();
+    if (!error && data) return data as { id: string; name: string };
+    if (error?.code !== "23505") {
+      console.error(`[submissions] proposal insert failed: ${error?.code ?? "unknown"}`);
+      return null;
+    }
+  }
+  return null;
+}
+
+function fingerprint(locationKey: string, input: StorySubmission) {
+  return createHash("sha256")
+    .update([locationKey, input.title, input.body].join("\u0000").toLowerCase())
+    .digest("hex");
+}
+
+export async function submitStory(
+  input: StorySubmission,
+  options: { authorId?: string } = {},
+): Promise<SubmitResult> {
+  const plan = await planLocation(input);
+  if (plan === "invalid") return { ok: false, reason: "invalid_destination" };
+  if (plan === "unavailable") return { ok: false, reason: "unavailable" };
 
   const pin =
     input.latitude !== undefined && input.longitude !== undefined
       ? { latitude: input.latitude, longitude: input.longitude }
       : undefined;
-  if (pin && destination.coordinates && distanceKm(pin, destination.coordinates) > MAX_PIN_DISTANCE_KM) {
+  const anchor =
+    plan.kind === "existing" ? (plan.placeCoordinates ?? plan.destination.coordinates) : plan.coordinates;
+  if (pin && anchor && distanceKm(pin, anchor) > MAX_PIN_DISTANCE_KM) {
     return { ok: false, reason: "location_too_far" };
   }
 
+  const locationKey =
+    plan.kind === "existing"
+      ? plan.destination.id
+      : `${plan.name.toLowerCase()}@${plan.coordinates.latitude.toFixed(2)},${plan.coordinates.longitude.toFixed(2)}`;
+  const accepted = {
+    ok: true as const,
+    destination:
+      plan.kind === "existing"
+        ? { name: plan.destination.name, slug: plan.destination.slug }
+        : { name: plan.name, slug: null },
+    proposedDestination: plan.kind === "propose",
+  };
+
   const now = Date.now();
-  const print = fingerprint(input);
+  const print = fingerprint(locationKey, input);
   const previous = recentSubmissions.get(print);
   if (previous && now - previous.at < DUPLICATE_WINDOW_MS) {
     // Same form re-submitted: it was already stored. Different form, same story: duplicate.
@@ -97,24 +224,37 @@ export async function submitStory(input: StorySubmission): Promise<SubmitResult>
   const busy = await isOverPendingCap(now);
   if (busy !== false) return { ok: false, reason: busy === "unknown" ? "unavailable" : "busy" };
 
+  let destinationId: string;
+  if (plan.kind === "existing") {
+    destinationId = plan.destination.id;
+  } else {
+    const proposal = await findOrCreateProposal(plan);
+    if (!proposal) return { ok: false, reason: "unavailable" };
+    destinationId = proposal.id;
+  }
+
+  // Coordinates only from a map pin or a selected place — never invented.
+  const coordinates = pin ?? (plan.kind === "existing" ? plan.placeCoordinates : plan.coordinates);
+  const placeName = input.place ?? (plan.kind === "existing" ? plan.placeName : undefined);
+
   let error: { code?: string; message?: string } | null;
   let created: { id: string } | null = null;
   try {
     ({ data: created, error } = await getSupabaseAdmin()
       .from("stories")
       .insert({
-        destination_id: destination.id,
+        destination_id: destinationId,
         title: input.title,
         body: input.body,
         category: input.category,
         challenge: input.challenge,
         lesson: input.lesson,
         advice: input.advice,
-        place_name: input.place ?? null,
+        place_name: placeName ?? null,
         travel_month: input.travelMonth ?? null,
         travel_year: input.travelYear ?? null,
-        latitude: pin?.latitude ?? null,
-        longitude: pin?.longitude ?? null,
+        latitude: coordinates?.latitude ?? null,
+        longitude: coordinates?.longitude ?? null,
         submission_key: input.submissionKey,
         // Never taken from the request:
         status: "pending",
@@ -134,6 +274,14 @@ export async function submitStory(input: StorySubmission): Promise<SubmitResult>
     // Log the code and message only — never the details, which can echo story text.
     console.error(`[submissions] insert failed: ${error.code ?? "network"} ${error.message ?? ""}`);
     return { ok: false, reason: "unavailable" };
+  }
+
+  // Link the signed-in author privately (anonymous submissions have no author).
+  if (options.authorId && created?.id) {
+    const { error: authorError } = await getSupabaseAdmin()
+      .from("story_authors")
+      .insert({ story_id: created.id, user_id: options.authorId });
+    if (authorError) console.error(`[submissions] author link failed: ${authorError.code ?? "unknown"}`);
   }
 
   if (recentSubmissions.size > 10_000) recentSubmissions.clear();

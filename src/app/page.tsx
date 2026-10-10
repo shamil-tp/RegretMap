@@ -9,7 +9,13 @@ import {
 import { DestinationSearch } from "@/components/destination-search";
 import { ShareCallout } from "@/components/share-callout";
 import { StoryExplorer } from "@/components/story-explorer";
-import { DataUnavailableError, listAllStories, listDestinations } from "@/lib/data";
+import {
+  DataUnavailableError,
+  getHelpfulState,
+  listAllStories,
+  listDestinations,
+} from "@/lib/data";
+import { getViewer } from "@/lib/supabase/session";
 import { formatLocation, storyNoun } from "@/lib/stories";
 
 export default function ExplorePage() {
@@ -76,6 +82,8 @@ async function ExploreContent() {
     return renderDataError(error);
   }
   if (stories.length === 0) return <NoStoriesYet />;
+  const viewer = await getViewer();
+  const helpful = await getHelpfulState(stories.map((s) => s.id), viewer?.id ?? null);
 
   return (
     <StoryExplorer
@@ -83,6 +91,7 @@ async function ExploreContent() {
       mapHeading="Explore the map"
       storiesHeading="Traveller stories"
       enableLocationPicker
+      helpful={helpful}
       aside={
         <>
           <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-ink-muted">
