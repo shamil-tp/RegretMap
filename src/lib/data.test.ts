@@ -157,3 +157,23 @@ describe("listDestinations", () => {
     expect(calls).toContainEqual(["eq", "stories.status", "published"]);
   });
 });
+
+describe("stories.source migration not applied yet", () => {
+  it("retries without the source column instead of failing", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const missing = fakeQuery({
+      data: null,
+      error: { code: "42703", message: "column stories.source does not exist" },
+    });
+    const legacyRow = { ...storyRow(), source: undefined };
+    const legacy = fakeQuery({ data: [legacyRow], error: null });
+    getSupabase.mockReturnValueOnce(missing.client).mockReturnValueOnce(legacy.client);
+
+    const stories = await data.listAllStories();
+
+    expect(stories).toHaveLength(1);
+    expect(stories[0].source).toBe("community");
+    const legacySelect = legacy.calls.find(([method]) => method === "select")?.[1] as string;
+    expect(legacySelect).not.toMatch(/\bsource\b/);
+  });
+});

@@ -19,6 +19,9 @@ export const STORY_COLUMNS =
   "travel_month, travel_year, challenge, lesson, advice, published_at, is_demo, source, " +
   "destination:destinations!inner(slug, name, region, country)";
 
+/** Same columns for a database without migration 20261011170000 (no `source`). */
+export const STORY_COLUMNS_WITHOUT_SOURCE = STORY_COLUMNS.replace(" source,", "");
+
 export type DestinationRow = {
   id: string;
   slug: string;
@@ -47,7 +50,8 @@ export type StoryRow = {
   advice: string | null;
   published_at: string | null;
   is_demo: boolean;
-  source: string;
+  /** Absent until migration 20261011170000_story_source.sql is applied. */
+  source?: string;
   destination: {
     slug: string;
     name: string;

@@ -7,6 +7,7 @@ import {
   mapDestination,
   mapStory,
   STORY_COLUMNS,
+  STORY_COLUMNS_WITHOUT_SOURCE,
   type DestinationRow,
   type StoryRow,
 } from "@/lib/mappers";
@@ -65,6 +66,48 @@ async function run<T>(
   return result.data as T | null;
 }
 
+/*
+ * Until migration 20261011170000_story_source.sql is applied, stories have no
+ * `source` column. Story queries then retry without it (every story is shown
+ * as a community story) instead of taking the whole site down. The fallback is
+ * re-checked every few minutes, so applying the migration takes effect without
+ * a redeploy.
+ */
+const SOURCE_RECHECK_MS = 5 * 60 * 1000;
+let sourceColumnMissingUntil = 0;
+
+function isMissingSourceColumn(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const { code, message } = error as { code?: unknown; message?: unknown };
+  return code === "42703" && String(message).includes("source");
+}
+
+async function runStories<T>(
+  operation: string,
+  query: (columns: string) => PromiseLike<{ data: unknown; error: unknown }>,
+): Promise<T | null> {
+  // Request time only (see run()); this also makes Date.now() safe to call.
+  await connection();
+  if (Date.now() >= sourceColumnMissingUntil) {
+    let result: { data: unknown; error: unknown };
+    try {
+      result = await query(STORY_COLUMNS);
+    } catch (error) {
+      fail(operation, error);
+    }
+    if (!isMissingSourceColumn(result.error)) {
+      if (result.error) fail(operation, result.error);
+      return result.data as T | null;
+    }
+    sourceColumnMissingUntil = Date.now() + SOURCE_RECHECK_MS;
+    console.warn(
+      "[data] stories.source is missing; apply supabase/migrations/20261011170000_story_source.sql. " +
+        "Showing all stories as community stories until then.",
+    );
+  }
+  return run<T>(operation, () => query(STORY_COLUMNS_WITHOUT_SOURCE));
+}
+
 export const listDestinations = cache(async (): Promise<DestinationSummary[]> => {
   const rows = await run<(DestinationRow & { stories: { count: number }[] })[]>(
     "listDestinations",
@@ -97,10 +140,10 @@ export const getDestinationBySlug = cache(async (slug: string): Promise<Destinat
 
 export const listStoriesForDestination = cache(
   async (destinationId: string): Promise<StoryWithDestination[]> => {
-    const rows = await run<StoryRow[]>("listStoriesForDestination", () =>
+    const rows = await runStories<StoryRow[]>("listStoriesForDestination", (columns) =>
       getSupabase()
         .from("stories")
-        .select(STORY_COLUMNS)
+        .select(columns)
         .eq("destination_id", destinationId)
         .eq("status", "published")
         .eq("destination.status", "published")
@@ -112,10 +155,10 @@ export const listStoriesForDestination = cache(
 );
 
 export const listAllStories = cache(async (): Promise<StoryWithDestination[]> => {
-  const rows = await run<StoryRow[]>("listAllStories", () =>
+  const rows = await runStories<StoryRow[]>("listAllStories", (columns) =>
     getSupabase()
       .from("stories")
-      .select(STORY_COLUMNS)
+      .select(columns)
       .eq("status", "published")
       .eq("destination.status", "published")
       .order("published_at", { ascending: false })
@@ -126,10 +169,10 @@ export const listAllStories = cache(async (): Promise<StoryWithDestination[]> =>
 
 export const getStoryById = cache(async (id: string): Promise<StoryWithDestination | null> => {
   if (!isUuid(id)) return null;
-  const row = await run<StoryRow>("getStoryById", () =>
+  const row = await runStories<StoryRow>("getStoryById", (columns) =>
     getSupabase()
       .from("stories")
-      .select(STORY_COLUMNS)
+      .select(columns)
       .eq("id", id)
       .eq("status", "published")
       .eq("destination.status", "published")
