@@ -49,7 +49,8 @@ jobs:
           npx next typegen
           npx tsc --noEmit
 
-      # No automated test suite is configured yet; add `npm test` here when one exists.
+      - name: Test
+        run: npm test
 
       - name: Build
         run: npm run build

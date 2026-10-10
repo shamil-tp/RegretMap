@@ -10,15 +10,16 @@ import {
   PLACE_QUERY_MIN,
   type PlaceSuggestion,
 } from "@/lib/place-search";
-import { pluralize, type Coordinates } from "@/lib/stories";
+import { formatLocation, storyNoun, type Coordinates } from "@/lib/stories";
 
 export type SearchableDestination = {
   slug: string;
   name: string;
-  region: string;
-  country: string;
+  region?: string;
+  country?: string;
   storyCount: number;
-  coordinates: Coordinates;
+  isDemo: boolean;
+  coordinates?: Coordinates;
 };
 
 type Option =
@@ -33,7 +34,9 @@ function matchDestinations(destinations: SearchableDestination[], query: string)
   const q = normalize(query);
   if (!q) return [];
   return destinations
-    .filter((d) => [d.name, d.region, d.country].some((field) => normalize(field).includes(q)))
+    .filter((d) =>
+      [d.name, d.region, d.country].some((field) => field && normalize(field).includes(q)),
+    )
     .sort(
       (a, b) =>
         Number(normalize(b.name).startsWith(q)) - Number(normalize(a.name).startsWith(q)),
@@ -42,8 +45,10 @@ function matchDestinations(destinations: SearchableDestination[], query: string)
 
 /** True when an external place is (roughly) the same as a destination we have. */
 function isSamePlace(place: PlaceSuggestion, destination: SearchableDestination) {
+  if (normalize(place.name) !== normalize(destination.name)) return false;
+  // Without coordinates, a matching name is the best signal available.
+  if (!destination.coordinates) return true;
   return (
-    normalize(place.name) === normalize(destination.name) &&
     Math.abs(place.latitude - destination.coordinates.latitude) < 0.5 &&
     Math.abs(place.longitude - destination.coordinates.longitude) < 0.5
   );
@@ -141,9 +146,9 @@ export function DestinationSearch({
     setQuery(place.name);
     setStatusMessage(
       `There are no stories for ${place.name}${place.context ? ` (${place.context})` : ""} yet. ` +
-        `Stories currently exist only for the demo destinations: ${destinations
-          .map((d) => d.name)
-          .join(", ")}.`,
+        (destinations.length > 0
+          ? `Stories currently exist for: ${destinations.map((d) => d.name).join(", ")}.`
+          : "No destinations have stories yet."),
     );
   }
 
@@ -180,9 +185,11 @@ export function DestinationSearch({
     }
     setIsOpen(false);
     setStatusMessage(
-      `No destinations with stories match “${trimmed}” yet. Try ${destinations
-        .map((d) => d.name)
-        .join(", ")}.`,
+      destinations.length > 0
+        ? `No destinations with stories match “${trimmed}” yet. Try ${destinations
+            .map((d) => d.name)
+            .join(", ")}.`
+        : `No destinations with stories match “${trimmed}” yet.`,
     );
   }
 
@@ -205,7 +212,7 @@ export function DestinationSearch({
     const isDestination = option.type === "destination";
     const name = isDestination ? option.destination.name : option.place.name;
     const detail = isDestination
-      ? `${option.destination.region}, ${option.destination.country}`
+      ? formatLocation(option.destination)
       : option.place.context;
     return (
       <li
@@ -231,7 +238,7 @@ export function DestinationSearch({
         <span className="shrink-0 self-center text-xs text-ink-muted">
           {isDestination ? (
             <span className="inline-flex items-center gap-1 text-accent-hover">
-              {pluralize(option.destination.storyCount, "demo story", "demo stories")}
+              {storyNoun(option.destination.storyCount, option.destination.isDemo)}
               <ArrowRight aria-hidden className="size-3.5" />
             </span>
           ) : (

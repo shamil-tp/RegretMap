@@ -3,7 +3,12 @@
 import { RotateCcw } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
-  seasonOf,
+  defaultStoryFilters,
+  filterAndSortStories,
+  type StoryFilterState,
+  type StorySort,
+} from "@/lib/story-filtering";
+import {
   storyCategories,
   travelSeasons,
   type StoryCategory,
@@ -11,40 +16,21 @@ import {
   type TravelStory,
 } from "@/lib/stories";
 
-export type StorySort = "newest" | "oldest" | "travel_month";
-
 const sortLabels: Record<StorySort, string> = {
   newest: "Newest first",
   oldest: "Oldest first",
   travel_month: "Travel month (Jan–Dec)",
 };
 
-type Filters = {
-  category: StoryCategory | "all";
-  season: TravelSeason | "any";
-  sort: StorySort;
-};
+type Filters = StoryFilterState;
 
-const defaultFilters: Filters = { category: "all", season: "any", sort: "newest" };
+const defaultFilters = defaultStoryFilters;
 
 /** Client-side filtering and sorting over an already-loaded list of stories. */
 export function useStoryFilters<T extends TravelStory>(stories: T[]) {
   const [filters, setFilters] = useState<Filters>(defaultFilters);
 
-  const visible = useMemo(() => {
-    const matches = stories.filter(
-      (story) =>
-        (filters.category === "all" || story.category === filters.category) &&
-        (filters.season === "any" ||
-          (story.travelMonth != null && seasonOf(story.travelMonth) === filters.season)),
-    );
-    return [...matches].sort((a, b) => {
-      if (filters.sort === "oldest") return a.publishedAt.localeCompare(b.publishedAt);
-      if (filters.sort === "travel_month")
-        return (a.travelMonth ?? 13) - (b.travelMonth ?? 13);
-      return b.publishedAt.localeCompare(a.publishedAt);
-    });
-  }, [stories, filters]);
+  const visible = useMemo(() => filterAndSortStories(stories, filters), [stories, filters]);
 
   const categories = useMemo(
     () =>

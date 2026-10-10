@@ -1,6 +1,6 @@
 /**
- * Domain types and pure helpers for destinations and travel stories.
- * These shapes are shared by the demo data source today and the database later.
+ * Domain types and pure helpers for destinations and travel stories,
+ * independent of where the data is stored.
  */
 
 export const storyCategories = {
@@ -24,10 +24,10 @@ export type Destination = {
   id: string;
   slug: string;
   name: string;
-  region: string;
-  country: string;
-  description: string;
-  coordinates: Coordinates;
+  region?: string;
+  country?: string;
+  description?: string;
+  coordinates?: Coordinates;
   /** True for development-only illustrative content. */
   isDemo: boolean;
 };
@@ -104,6 +104,16 @@ export function seasonOf(month: number): TravelSeason {
     ([, season]) => season.months.includes(month),
   );
   return entry ? entry[0] : "dec_feb";
+}
+
+/** "Region, Country" from whichever parts are known. */
+export function formatLocation(place: Pick<Destination, "region" | "country">) {
+  return [place.region, place.country].filter(Boolean).join(", ");
+}
+
+/** Noun for story counts: demo content is always labelled as such. */
+export function storyNoun(count: number, isDemo: boolean) {
+  return pluralize(count, isDemo ? "demo story" : "story", isDemo ? "demo stories" : "stories");
 }
 
 export function pluralize(count: number, singular: string, plural = `${singular}s`) {

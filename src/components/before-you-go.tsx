@@ -2,14 +2,17 @@ import { Lightbulb } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import type { BeforeYouGoItem } from "@/lib/before-you-go";
-import { pluralize } from "@/lib/stories";
+import { storyNoun } from "@/lib/stories";
 
 export function BeforeYouGo({
   items,
   destinationName,
+  fromDemo,
 }: {
   items: BeforeYouGoItem[];
   destinationName: string;
+  /** True when the source stories include demo content. */
+  fromDemo: boolean;
 }) {
   return (
     <section aria-labelledby="before-you-go-heading">
@@ -20,7 +23,7 @@ export function BeforeYouGo({
         >
           Before you go
         </h2>
-        <Badge tone="demo">Derived from demo stories</Badge>
+        {fromDemo && <Badge tone="demo">Derived from demo stories</Badge>}
       </div>
       <p className="mt-2 max-w-2xl text-sm text-ink-muted">
         Lessons quoted from travellers&apos; stories about {destinationName}, grouped by
@@ -56,7 +59,7 @@ export function BeforeYouGo({
               <p className="mt-2 text-xs text-ink-muted">
                 {item.storyCount === 1
                   ? "One traveller reported this"
-                  : `Based on ${pluralize(item.storyCount, "demo story", "demo stories")}`}
+                  : `Based on ${storyNoun(item.storyCount, fromDemo)}`}
                 {item.seasonLabel && ` · Travelled ${item.seasonLabel}`}
               </p>
             </li>

@@ -40,8 +40,9 @@ export function StoryCard({
       </h3>
       <p className="mt-1 inline-flex items-center gap-1 text-sm text-ink-muted">
         <MapPin aria-hidden className="size-3.5 shrink-0" />
-        {story.place ? `${story.place}, ` : ""}
-        {story.destination.name}, {story.destination.region}
+        {[story.place, story.destination.name, story.destination.region]
+          .filter(Boolean)
+          .join(", ")}
       </p>
 
       <p className="mt-3 line-clamp-3 text-[0.95rem] leading-relaxed text-ink">

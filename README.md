@@ -11,10 +11,11 @@ built from those stories.
 RegretMap is about **destinations, places, journeys, activities and travel
 conditions** — not a hotel, room or restaurant rating site.
 
-> **Current status: development preview (Phase 3 of 11).**
-> All stories, destinations and counts in the app are **clearly labelled demo
-> data** written for development. There is no database, user accounts, story
-> submission or AI yet. See the [roadmap](#roadmap).
+> **Current status: development preview (Phase 4 of 11).**
+> Destinations and stories are read from Supabase (PostgreSQL) with Row Level
+> Security. The current content is a **clearly labelled demo seed** written for
+> development — not real community submissions. There are no user accounts,
+> story submission or AI yet. See the [roadmap](#roadmap).
 
 ---
 
@@ -27,6 +28,7 @@ conditions** — not a hotel, room or restaurant rating site.
 - [Scripts](#scripts)
 - [Project structure](#project-structure)
 - [How it works](#how-it-works)
+- [Database (Supabase)](#database-supabase)
 - [Demo data](#demo-data)
 - [Maps, place search and usage policies](#maps-place-search-and-usage-policies)
 - [Design principles](#design-principles)
@@ -93,9 +95,11 @@ conditions** — not a hotel, room or restaurant rating site.
 | UI | React 19, TypeScript (strict), Tailwind CSS v4, [Lucide](https://lucide.dev) icons |
 | Map | [Leaflet](https://leafletjs.com) 1.9 + [React Leaflet](https://react-leaflet.js.org) 5, OpenStreetMap tiles |
 | Place search | [Photon](https://photon.komoot.io) (OpenStreetMap-based geocoder), via a server route |
+| Database | [Supabase](https://supabase.com) PostgreSQL with Row Level Security, `@supabase/supabase-js` (server-side only) |
+| Testing | [Vitest](https://vitest.dev) (unit tests with a mocked Supabase client) |
 | Linting | ESLint 9 with `eslint-config-next` |
 | CI/CD | GitHub Actions (CI checks + tag-based GitHub Releases) |
-| Planned | Supabase (PostgreSQL, Auth, RLS), Gemini API (server-side only) |
+| Planned | Supabase Auth, Gemini API (server-side only) |
 
 ## Getting started
 
@@ -112,27 +116,30 @@ conditions** — not a hotel, room or restaurant rating site.
 git clone https://github.com/shamil-tp/RegretMap.git
 cd RegretMap
 npm install
-cp .env.example .env.local   # optional for now — no variable is required yet
+cp .env.example .env.local   # then fill in the Supabase URL and publishable key
 npm run dev
 ```
 
-Open <http://localhost:3000>.
+Open <http://localhost:3000>. Before stories appear, set up the database once —
+see [Database (Supabase)](#database-supabase). Without it, pages still load and
+show a friendly "Stories can't be loaded right now" message.
 
 > Only one `next dev` server can run per project folder. If another one is already
 > running, Next.js prints its URL and PID instead of starting a second server.
 
 ## Environment variables
 
-Copy `.env.example` to `.env.local` (which is git-ignored). **No variable is
-required to run the current version.**
+Copy `.env.example` to `.env.local` (which is git-ignored). Only the two Supabase
+variables are needed to load stories; everything else is optional or for later
+phases.
 
 | Variable | Exposed to browser | Used now | Purpose |
 |---|---|---|---|
 | `NEXT_PUBLIC_MAP_TILE_URL` | Yes | Yes (optional) | Custom tile URL template. Must be `https://` and contain `{z}`, `{x}`, `{y}`; otherwise the OpenStreetMap default is used. |
 | `PHOTON_API_URL` | No | Yes (optional) | Self-hosted Photon endpoint (https). Empty uses the public `https://photon.komoot.io/api/`. |
-| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Phase 4 | Supabase project URL. |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | Phase 4 | Supabase publishable key (`sb_publishable_…`). |
-| `SUPABASE_SECRET_KEY` | **No — server only** | Phase 4+ | Supabase secret key (`sb_secret_…`) for trusted server operations. |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | **Yes (required)** | Supabase project URL (Dashboard → Project Settings → Data API). |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | **Yes (required)** | Publishable key (`sb_publishable_…`). Used on the server for public reads; RLS applies. |
+| `SUPABASE_SECRET_KEY` | **No — server only** | Not yet | Secret key for trusted server operations in later phases. |
 | `GEMINI_API_KEY` | **No — server only** | Phase 7+ | Gemini API key. |
 | `GEMINI_MODEL` | No | Phase 7+ | Gemini model identifier. |
 
@@ -147,9 +154,8 @@ or committed files.
 | `npm run build` | Production build |
 | `npm run start` | Serve the production build |
 | `npm run lint` | ESLint |
+| `npm test` | Vitest unit tests (no network, no real credentials) |
 | `npx next typegen && npx tsc --noEmit` | Type-check (`typegen` creates Next.js route types first) |
-
-There is no automated test suite yet; it will be added in the phase that needs it.
 
 ## Project structure
 
@@ -175,13 +181,21 @@ src/
 │   ├── map/story-map.tsx             Leaflet map (pins, popups, focus, picker)
 │   ├── site-header.tsx · mobile-nav.tsx · site-footer.tsx · wordmark.tsx
 │   └── ui/                           Button styles, Badge, StateMessage
-└── lib/
-    ├── stories.ts                    Domain types (Destination, TravelStory, …) and formatters
-    ├── data.ts                       Data-access functions (the only way UI reads data)
-    ├── demo-data.ts                  DEMO destinations and stories
-    ├── before-you-go.ts              Groups story lessons by topic
-    ├── map.ts                        Tile config, MapPoint type, story → map point
-    └── place-search.ts               Place-search types and client helper
+├── lib/
+│   ├── stories.ts                    Domain types (Destination, TravelStory, …) and formatters
+│   ├── data.ts                       Data-access functions (only DB reader; server-only)
+│   ├── mappers.ts                    Selected columns, row types, row → domain mapping
+│   ├── supabase/server.ts            Server-only Supabase client (publishable key)
+│   ├── story-filtering.ts            Pure filter/sort used by the feed
+│   ├── before-you-go.ts              Groups story lessons by topic
+│   ├── map.ts                        Tile config, MapPoint type, story → map point
+│   ├── place-search.ts               Place-search types and client helper
+│   └── *.test.ts                     Unit tests
+└── test/                             Test fixtures and stubs
+supabase/
+├── migrations/                       Versioned SQL migrations (schema + RLS)
+├── seed.sql                          DEMO seed data (is_demo = true)
+└── tests/rls_check.sql               Non-destructive RLS policy check
 ```
 
 ## How it works
@@ -189,13 +203,17 @@ src/
 ### Data flow
 
 ```text
-demo-data.ts ──► data.ts (async functions) ──► Server Components (pages)
-                                             └─► Client Components get only the props they need
+Supabase (RLS) ──► lib/supabase/server.ts ──► lib/data.ts ──► Server Components (pages)
+                                                            └─► Client Components get only the props they need
 ```
 
-UI code never imports the demo data directly. In Phase 4, `src/lib/data.ts` will be
-reimplemented against Supabase with the same function signatures, so pages and
-components should not need to change.
+- `src/lib/data.ts` is the only module that queries the database. It is
+  `server-only`, filters on `status = 'published'` explicitly (in addition to RLS),
+  selects only the columns the UI needs, bounds result sizes, and deduplicates
+  repeated calls within a request with React `cache`.
+- Database errors are logged on the server and reach users only as a generic
+  "Stories can't be loaded right now" state — never raw error text. There is **no
+  silent fallback** to fictional data.
 
 Main types (`src/lib/stories.ts`): `Destination`, `TravelStory`, `StoryCategory`,
 `Coordinates`, and `StoryWithDestination`.
@@ -205,8 +223,11 @@ safety, costs, local customs, other.
 
 ### Rendering
 
-- Pages are React Server Components. Destination and story pages are pre-rendered
-  at build time with `generateStaticParams`; unknown slugs return the not-found page.
+- Pages are React Server Components with Cache Components (Partial Prerendering):
+  a static shell is prerendered, and database-backed sections stream in at request
+  time inside `<Suspense>` boundaries with skeleton loading states. The database is
+  never queried at build time, so builds (including CI) need no credentials and new
+  stories appear without a rebuild. Unknown slugs/ids show the not-found page.
 - Interactive pieces (search, filters, map, mobile menu, story actions) are Client
   Components.
 - The map is browser-only (`next/dynamic` with `ssr: false`). It creates the Leaflet
@@ -231,13 +252,55 @@ simplified suggestions. It:
 The rate limit and cache are in memory per server instance — fine for development
 and a single instance; a shared store is needed for a scaled deployment.
 
+## Database (Supabase)
+
+### Schema
+
+| Table | Purpose | Key columns |
+|---|---|---|
+| `destinations` | Places travellers write about | `slug` (unique, URL-safe), `name`, `region`, `country`, `description`, `latitude`/`longitude`, `status` (`draft` / `published` / `hidden`), `is_demo`, timestamps |
+| `stories` | Personal travel experiences | `destination_id` → `destinations.id` (**on delete restrict** — no orphans), `title`, `body`, `category`, `place_name`, coordinates, `travel_month`/`travel_year`, `challenge`, `lesson`, `advice`, `status` (`pending` / `published` / `hidden` / `rejected`), `published_at`, `is_demo`, timestamps |
+
+Constraints enforce length limits, valid categories and months, coordinate ranges,
+both-or-neither coordinates, and a `published_at` date for published stories.
+Partial indexes cover published stories per destination and globally, newest first.
+`updated_at` is maintained by a trigger.
+
+### Row Level Security
+
+- `anon` and `authenticated` can **only SELECT** published destinations, and
+  published stories whose destination is also published.
+- There are **no insert/update/delete policies**, and write privileges are revoked,
+  so browsers cannot create, publish or modify content.
+- The app never uses a secret/service-role key for these reads.
+
+### Set up a Supabase project
+
+Run these in **Supabase Dashboard → SQL Editor** (or `npx supabase db push` if you
+use the Supabase CLI), in order:
+
+1. `supabase/migrations/20261011120000_create_destinations_and_stories.sql`
+2. `supabase/migrations/20261011120100_public_read_rls.sql`
+3. *(optional, development only)* `supabase/seed.sql` — labelled demo content
+4. `supabase/tests/rls_check.sql` — should finish with "All RLS checks passed";
+   it rolls back everything it creates.
+
+Migrations are additive (no drops or resets). Never run the seed automatically in
+production.
+
 ## Demo data
 
-`src/lib/demo-data.ts` contains **5 demo destinations** (Manali, Munnar, Jaipur,
-Leh, Varkala) and **18 demo stories**.
+`supabase/seed.sql` inserts **5 demo destinations** (Manali, Munnar, Jaipur, Leh,
+Varkala) and **18 demo stories**, all with `is_demo = true`. It is safe to re-run
+(it never overwrites rows). Remove it later with:
 
-- Every record has `isDemo: true`, and the UI labels them "Demo example",
-  "Demo destination" or "Derived from demo stories".
+```sql
+delete from public.stories where is_demo;
+delete from public.destinations where is_demo;
+```
+
+- The UI labels demo records "Demo example", "Demo destination" or "Derived from
+  demo stories"; non-demo records are shown without these labels.
 - They are illustrative scenarios written for development — **not real people, real
   submissions, or verified facts**. Published dates are labelled "Sample date".
 - Coordinates are approximate public locations chosen for map testing.
@@ -282,8 +345,8 @@ These guide current and future phases (see `CLAUDE.md` for the full specificatio
 GitHub Actions workflows live in `.github/workflows/`.
 
 **CI (`ci.yml`)** runs on pull requests to `main` and pushes to `main`:
-`npm ci` → lint → type-check → production build, on Node 24 with npm caching and a
-read-only token. Superseded runs are cancelled. No secrets are needed.
+`npm ci` → lint → type-check → tests → production build, on Node 24 with npm caching
+and a read-only token. Superseded runs are cancelled. No secrets are needed.
 
 **Release (`release.yml`)** runs when a tag like `v1.2.3` is pushed:
 
@@ -308,7 +371,7 @@ Development follows the phases in [`CLAUDE.md`](CLAUDE.md):
 | 1 | Frontend foundation and design system | ✅ Done |
 | 2 | Interactive map (Leaflet + OpenStreetMap) | ✅ Done |
 | 3 | Destination and story UI, search, filters (demo data) | ✅ Done |
-| 4 | Supabase schema, RLS and data access | Planned |
+| 4 | Supabase schema, RLS and data access | ✅ Done |
 | 5 | Submit and browse real community stories, reactions, reports | Planned |
 | 6 | Heatmap, clusters and location filters | Planned |
 | 7 | Gemini moderation (server-side) | Planned |
@@ -317,9 +380,10 @@ Development follows the phases in [`CLAUDE.md`](CLAUDE.md):
 | 10 | Authentication and account controls | Planned |
 | 11 | Quality, accessibility and launch readiness | Planned |
 
-Known gaps in the current version: no story submission form yet, no persistence,
-Helpful/Report are placeholders, no automated tests, and some landmark names don't
-match well in Photon (e.g. "Amer Fort").
+Known gaps in the current version: no story submission form yet, Helpful/Report
+are placeholders, no pagination (lists are capped at 100–200 stories), not-found
+pages for missing destinations/stories return HTTP 200 because they stream after the
+page shell, and some landmark names don't match well in Photon (e.g. "Amer Fort").
 
 ## Contributing
 

@@ -1,4 +1,9 @@
-import type { Coordinates, StoryCategory, StoryWithDestination } from "@/lib/stories";
+import {
+  formatLocation,
+  type Coordinates,
+  type StoryCategory,
+  type StoryWithDestination,
+} from "@/lib/stories";
 
 /**
  * Standard OpenStreetMap tile service. No API key is required, but usage must
@@ -10,7 +15,7 @@ export const OSM_TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
 export const OSM_ATTRIBUTION =
   '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
-/** Initial view: India, where the current demo stories are located. */
+/** Initial view when a map is not fitted to its points (India). */
 export const DEFAULT_CENTER: [number, number] = [22.5, 79];
 export const DEFAULT_ZOOM = 4;
 export const MIN_ZOOM = 2;
@@ -65,7 +70,7 @@ export function storiesToMapPoints(stories: StoryWithDestination[]): MapPoint[] 
             title: story.title,
             place: story.place
               ? `${story.place}, ${story.destination.name}`
-              : `${story.destination.name}, ${story.destination.region}`,
+              : [story.destination.name, formatLocation(story.destination)].filter(Boolean).join(", "),
             category: story.category,
             isDemo: story.isDemo,
             href: `/stories/${story.id}`,

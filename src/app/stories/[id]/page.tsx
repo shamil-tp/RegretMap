@@ -2,31 +2,37 @@ import { ArrowLeft, MapPin } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
+import { renderDataError, StoryListSkeleton } from "@/components/data-states";
 import { ExploreMap } from "@/components/map/explore-map";
 import { StoryActions } from "@/components/story-actions";
 import { Badge } from "@/components/ui/badge";
-import { getStoryById, listAllStories, listStoriesForDestination } from "@/lib/data";
+import {
+  DataUnavailableError,
+  getStoryById,
+  listStoriesForDestination,
+} from "@/lib/data";
 import { storiesToMapPoints } from "@/lib/map";
 import {
   formatPublishedDate,
   formatTravelDate,
   storyCategories,
+  type StoryWithDestination,
 } from "@/lib/stories";
 
-export async function generateStaticParams() {
-  const stories = await listAllStories();
-  return stories.map(({ id }) => ({ id }));
-}
+type Props = PageProps<"/stories/[id]">;
 
-export async function generateMetadata({
-  params,
-}: PageProps<"/stories/[id]">): Promise<Metadata> {
-  const story = await getStoryById((await params).id);
-  if (!story) return { title: "Story not found — RegretMap" };
-  return {
-    title: `${story.title} — ${story.destination.name} — RegretMap`,
-    description: story.lesson ?? story.body.slice(0, 150),
-  };
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  try {
+    const story = await getStoryById((await params).id);
+    if (!story) return { title: "Story not found — RegretMap" };
+    return {
+      title: `${story.title} — ${story.destination.name} — RegretMap`,
+      description: story.lesson ?? story.body.slice(0, 150),
+    };
+  } catch {
+    return { title: "RegretMap" };
+  }
 }
 
 function StorySection({ title, children }: { title: string; children: React.ReactNode }) {
@@ -38,18 +44,51 @@ function StorySection({ title, children }: { title: string; children: React.Reac
   );
 }
 
-export default async function StoryPage({ params }: PageProps<"/stories/[id]">) {
-  const story = await getStoryById((await params).id);
+export default function StoryPage({ params }: Props) {
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+      <Suspense
+        fallback={
+          <>
+            <p role="status" className="sr-only">
+              Loading story…
+            </p>
+            <div className="h-9 w-2/3 animate-pulse rounded bg-surface" />
+            <StoryListSkeleton count={1} />
+          </>
+        }
+      >
+        <StoryContent params={params} />
+      </Suspense>
+    </div>
+  );
+}
+
+async function StoryContent({ params }: Pick<Props, "params">) {
+  const { id } = await params;
+  let story: StoryWithDestination | null;
+  try {
+    story = await getStoryById(id);
+  } catch (error) {
+    return renderDataError(error);
+  }
   if (!story) notFound();
 
+  // Related stories are optional; the story still renders if they fail to load.
+  let related: StoryWithDestination[] = [];
+  try {
+    related = (await listStoriesForDestination(story.destinationId))
+      .filter((s) => s.id !== story.id)
+      .slice(0, 3);
+  } catch (error) {
+    if (!(error instanceof DataUnavailableError)) throw error;
+  }
+
   const travelDate = formatTravelDate(story);
-  const related = (await listStoriesForDestination(story.destinationId))
-    .filter((s) => s.id !== story.id)
-    .slice(0, 3);
   const point = storiesToMapPoints([story]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+    <>
       <Link
         href={`/destinations/${story.destination.slug}`}
         className="inline-flex items-center gap-1 rounded text-sm text-ink-muted hover:text-ink"
@@ -78,7 +117,7 @@ export default async function StoryPage({ params }: PageProps<"/stories/[id]">) 
               >
                 {story.destination.name}
               </Link>
-              {`, ${story.destination.region}`}
+              {story.destination.region && `, ${story.destination.region}`}
             </span>
           </p>
           <p className="mt-1 text-sm text-ink-muted">
@@ -119,7 +158,12 @@ export default async function StoryPage({ params }: PageProps<"/stories/[id]">) 
                 Where it happened
               </h2>
               <div className="mt-4">
-                <ExploreMap points={point} fitToPoints highlightedPointId={story.id} />
+                <ExploreMap
+                  points={point}
+                  fitToPoints
+                  highlightedPointId={story.id}
+                  showDemoNote={story.isDemo}
+                />
               </div>
             </section>
           )}
@@ -149,6 +193,6 @@ export default async function StoryPage({ params }: PageProps<"/stories/[id]">) 
           )}
         </aside>
       </div>
-    </div>
+    </>
   );
 }

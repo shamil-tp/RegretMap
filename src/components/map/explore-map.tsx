@@ -22,9 +22,15 @@ const StoryMap = dynamic(() => import("@/components/map/story-map"), {
 type ExploreMapProps = Omit<StoryMapProps, "selectedLocation" | "onLocationSelect"> & {
   /** Let users click the map to pick a location (for the future story form). */
   enableLocationPicker?: boolean;
+  /** Show the note that pins are demo examples. */
+  showDemoNote?: boolean;
 };
 
-export function ExploreMap({ enableLocationPicker = false, ...mapProps }: ExploreMapProps) {
+export function ExploreMap({
+  enableLocationPicker = false,
+  showDemoNote = false,
+  ...mapProps
+}: ExploreMapProps) {
   const [selected, setSelected] = useState<LatLng | null>(null);
 
   return (
@@ -42,9 +48,11 @@ export function ExploreMap({ enableLocationPicker = false, ...mapProps }: Explor
         </MapErrorBoundary>
       </div>
 
-      <p className="mt-2 text-xs text-ink-muted">
-        Pins mark demo example locations, not real community submissions.
-      </p>
+      {showDemoNote && (
+        <p className="mt-2 text-xs text-ink-muted">
+          Demo pins mark example locations, not real community submissions.
+        </p>
+      )}
 
       {enableLocationPicker && (
         <div aria-live="polite" className="mt-3 text-sm text-ink-muted">

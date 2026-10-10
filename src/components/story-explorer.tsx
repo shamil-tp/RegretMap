@@ -35,6 +35,7 @@ export function StoryExplorer({
     null,
   );
   const points = useMemo(() => storiesToMapPoints(visible), [visible]);
+  const hasDemo = stories.some((story) => story.isDemo);
 
   function showOnMap(id: string) {
     setHighlightedId(id);
@@ -56,6 +57,7 @@ export function StoryExplorer({
             focusRequest={focusRequest}
             onPointSelect={setHighlightedId}
             enableLocationPicker={enableLocationPicker}
+            showDemoNote={hasDemo}
           />
         </div>
         {aside}
@@ -65,11 +67,13 @@ export function StoryExplorer({
         <h2 id="stories-heading" className="text-lg font-semibold text-ink">
           {storiesHeading}
         </h2>
-        <p className="mt-2 flex gap-2 rounded-md bg-surface px-3 py-2.5 text-sm text-ink-muted">
-          <Info aria-hidden className="mt-0.5 size-4 shrink-0" />
-          These are illustrative demo examples for development, not real community
-          submissions.
-        </p>
+        {hasDemo && (
+          <p className="mt-2 flex gap-2 rounded-md bg-surface px-3 py-2.5 text-sm text-ink-muted">
+            <Info aria-hidden className="mt-0.5 size-4 shrink-0" />
+            Stories marked &ldquo;Demo example&rdquo; are illustrative examples for
+            development, not real community submissions.
+          </p>
+        )}
         <div className="mt-4">
           <StoryFilters
             {...filterState}
