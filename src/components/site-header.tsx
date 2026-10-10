@@ -43,7 +43,7 @@ async function HeaderNavForViewer() {
 
 export function SiteHeader() {
   return (
-    <header className="relative border-b border-line bg-canvas">
+    <header className="relative border-b border-line bg-canvas/95">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Wordmark />
         {/* Reading the session is per-request, so the nav streams in. */}

@@ -1,12 +1,12 @@
 type ButtonVariant = "primary" | "secondary" | "ghost";
 
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex min-h-10 items-center justify-center gap-2 rounded-full text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50";
 
 const variants: Record<ButtonVariant, string> = {
-  primary: "bg-accent px-4 py-2.5 text-white hover:bg-accent-hover",
+  primary: "bg-accent px-5 py-2.5 text-white shadow-sm hover:bg-accent-hover",
   secondary:
-    "border border-line bg-canvas px-4 py-2.5 text-ink hover:bg-surface",
+    "border border-line bg-card px-5 py-2.5 text-ink hover:border-coral hover:bg-strawberry/40",
   ghost: "px-3 py-2 text-ink-muted hover:bg-surface hover:text-ink",
 };
 

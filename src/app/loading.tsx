@@ -6,7 +6,7 @@ export default function Loading() {
       <p className="sr-only" role="status">
         Loading stories…
       </p>
-      <div className="divide-y divide-line">
+      <div className="space-y-4">
         <StoryCardSkeleton />
         <StoryCardSkeleton />
         <StoryCardSkeleton />

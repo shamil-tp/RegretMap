@@ -300,7 +300,7 @@ commit;
 }
 
 export function buildCheckSql({ destinations, notes }) {
-  const idList = notes.map((n) => `    ('${n.id}'::uuid, ${sql(n.region)})`).join(",\n");
+  const idList = notes.map((n) => `    '${n.id}'`).join(",\n");
   const slugList = destinations.map((d) => sql(d.slug)).join(", ");
   const states = STATES.map(sql).join(", ");
   return `-- RegretMap — read-only checks for supabase/seed_india_editorial.sql.
@@ -310,6 +310,10 @@ export function buildCheckSql({ destinations, notes }) {
 
 do $$
 declare
+  -- Ids of the seeded notes, kept in an array: this script writes nothing.
+  seed_ids uuid[] := array[
+${idList}
+  ]::uuid[];
   expected int := ${notes.length};
   found int;
   visible int;
@@ -317,35 +321,32 @@ declare
   missing_states text;
   dup_titles int;
 begin
-  create temp table seed_ids (id uuid primary key, region text) on commit drop;
-  insert into seed_ids values
-${idList};
-
-  select count(*) into found from public.stories s join seed_ids i using (id);
+  select count(*) into found from public.stories s where s.id = any(seed_ids);
   if found <> expected then
     raise exception 'Expected % seeded notes, found %', expected, found;
   end if;
 
   select count(*) into wrong_source
-  from public.stories s join seed_ids i using (id)
-  where s.source <> 'editorial' or s.is_demo or s.submission_key is not null;
+  from public.stories s
+  where s.id = any(seed_ids)
+    and (s.source <> 'editorial' or s.is_demo or s.submission_key is not null);
   if wrong_source > 0 then
     raise exception '% seeded rows are not marked editorial (or look like submissions)', wrong_source;
   end if;
 
   select count(*) into visible
-  from public.stories s join seed_ids i using (id)
+  from public.stories s
   join public.destinations d on d.id = s.destination_id
-  where s.status = 'published' and d.status = 'published'
+  where s.id = any(seed_ids) and s.status = 'published' and d.status = 'published'
     and s.latitude between -90 and 90 and s.longitude between -180 and 180;
   raise notice '% of % seeded notes are publicly visible with coordinates', visible, expected;
 
   select string_agg(st, ', ') into missing_states
   from unnest(array[${states}]) as st
   where not exists (
-    select 1 from public.stories s join seed_ids i using (id)
+    select 1 from public.stories s
     join public.destinations d on d.id = s.destination_id
-    where d.region = st and s.status = 'published' and d.status = 'published'
+    where s.id = any(seed_ids) and d.region = st and s.status = 'published' and d.status = 'published'
   );
   if missing_states is not null then
     raise exception 'States without a visible seeded note: %', missing_states;

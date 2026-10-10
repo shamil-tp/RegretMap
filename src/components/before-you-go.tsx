@@ -28,19 +28,13 @@ export function BeforeYouGo({
         </h2>
         {fromDemo && <Badge tone="demo">Derived from demo stories</Badge>}
       </div>
-      <p className="mt-2 max-w-2xl text-sm text-ink-muted">
-        {hasEditorial ? (
-          <>
-            Practical lessons from travellers&apos; stories and RegretMap travel notes about{" "}
-            {destinationName}. They are not verified or current advice
-          </>
-        ) : (
-          <>
-            Practical lessons from travellers&apos; stories about {destinationName}. They are
-            personal experiences, not verified or current advice
-          </>
-        )}{" "}
-        — check official sources for permits, weather, safety and transport.
+      <p className="mt-1 text-base text-ink">Little lessons from travellers who&apos;ve been there.</p>
+      <p className="mt-1 max-w-2xl text-sm text-ink-muted">
+        {hasEditorial
+          ? "Drawn from travellers' stories and RegretMap travel notes about "
+          : "Drawn from travellers' stories about "}
+        {destinationName}. Not verified or current advice — check official sources for permits,
+        weather, safety and transport.
       </p>
 
       {aiSummary}
@@ -51,8 +45,12 @@ export function BeforeYouGo({
       )}
 
       {items.length === 0 ? (
-        <p className="mt-6 text-sm text-ink-muted">
-          No lessons have been shared for {destinationName} yet.
+        <p className="mt-6 rounded-lg bg-butter/50 px-4 py-3 text-sm text-ink">
+          No lessons have been shared for {destinationName} yet.{" "}
+          <Link href="/submit" className="font-medium text-accent underline-offset-2 hover:underline">
+            Share yours
+          </Link>{" "}
+          and help the next traveller.
         </p>
       ) : (
         <ul className="mt-6 grid gap-x-10 gap-y-8 sm:grid-cols-2">

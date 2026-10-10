@@ -1,15 +1,35 @@
 @import "tailwindcss";
 
-/* RegretMap design tokens — light theme only. */
+/*
+ * RegretMap design tokens — light theme only, candy/macaron palette.
+ * Pastels are for surfaces, chips and details; text stays deep plum.
+ * Watermelon coral (#ff7777) is decorative (pins, borders): it is too light for
+ * text or white-on-coral buttons, so `accent` is a deeper coral that passes
+ * WCAG AA (≥ 4.5:1) on white and vanilla.
+ */
 @theme {
-  --color-canvas: #ffffff;
-  --color-surface: #f6f6f5;
-  --color-line: #e6e4e1;
-  --color-ink: #1d2125;
-  --color-ink-muted: #5a6169;
-  --color-accent: #d1383d;
-  --color-accent-hover: #b02e33;
-  --color-accent-soft: #fdeeed;
+  --color-canvas: #fffcf6; /* warm vanilla page background */
+  --color-card: #ffffff;
+  --color-surface: #f7f2f8; /* quiet panels, skeletons */
+  --color-line: #e9e3ed;
+  --color-ink: #332b40; /* deep plum */
+  --color-ink-muted: #756d7f; /* muted mauve */
+  --color-accent: #c93f52;
+  --color-accent-hover: #a8334a;
+  --color-accent-soft: #ffdce5; /* strawberry milk */
+  --color-coral: #ff7777; /* watermelon coral, decorative only */
+
+  --color-strawberry: #ffdce5;
+  --color-peach: #ffe2d1;
+  --color-butter: #fff0b8;
+  --color-mint: #d9f5e6;
+  --color-sky: #dceeff;
+  --color-lavender: #e9dfff;
+
+  /* Softer, rounder corners everywhere. */
+  --radius-md: 0.75rem;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.5rem;
 }
 
 @theme inline {
@@ -44,7 +64,9 @@ html .leaflet-container {
 }
 
 html .leaflet-popup-content-wrapper {
-  border-radius: 0.5rem;
+  border-radius: 1rem;
+  color: var(--color-ink);
+  box-shadow: 0 6px 20px rgb(51 43 64 / 0.15);
 }
 
 html .leaflet-popup-content {
@@ -55,7 +77,7 @@ html .leaflet-popup-content {
 .map-pin {
   border: 2px solid #ffffff;
   border-radius: 9999px;
-  background: var(--color-accent);
+  background: var(--color-coral);
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
 }
 
@@ -66,11 +88,23 @@ html .leaflet-popup-content {
 .map-pin--highlighted {
   border-width: 3px;
   box-shadow:
-    0 0 0 3px rgb(209 56 61 / 0.3),
+    0 0 0 3px rgb(255 119 119 / 0.35),
     0 1px 3px rgb(0 0 0 / 0.35);
 }
 
 /* Story-density heatmap: translucent so the base map stays readable. */
 html .leaflet-heatmap-layer {
   opacity: 0.75;
+}
+
+/* Respect reduced-motion preferences for transitions and smooth scrolling. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

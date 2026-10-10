@@ -24,8 +24,15 @@ const FEATURED_DESTINATIONS = 10;
 export default function ExplorePage() {
   return (
     <>
-      <section className="border-b border-line">
-        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+      <section className="relative overflow-hidden border-b border-line bg-strawberry/40">
+        {/* Decorative confetti dots — purely visual. */}
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <span className="absolute right-[8%] top-8 size-16 rounded-full bg-butter/80" />
+          <span className="absolute right-[22%] top-24 size-6 rounded-full bg-mint" />
+          <span className="absolute bottom-6 right-[12%] size-10 rotate-12 rounded-xl bg-sky" />
+          <span className="absolute -left-6 bottom-4 size-20 rounded-full bg-lavender/70" />
+        </div>
+        <div className="relative mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
           <h1 className="max-w-2xl font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
             Every journey leaves a lesson.
           </h1>

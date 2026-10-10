@@ -32,7 +32,7 @@ export function MobileNav({
           id="mobile-nav"
           aria-label="Mobile"
           onKeyDown={(event) => event.key === "Escape" && setOpen(false)}
-          className="absolute inset-x-0 top-full z-20 border-b border-line bg-canvas px-4 py-2 shadow-sm"
+          className="absolute inset-x-0 top-full z-20 border-b border-line bg-card px-4 py-2 shadow-md"
         >
           <ul>
             {links.map((link) => (

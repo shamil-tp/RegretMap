@@ -78,6 +78,19 @@ describe("validateRecommendations", () => {
     expect(validateRecommendations(fabricated, refs, meta)).toBeNull();
   });
 
+  it("discards only the unsupported recommendation and keeps validly sourced ones", () => {
+    const mixed = output({
+      recommendations: [
+        { category: "transport", title: "Supported tip here", advice: "Backed by a real story.", sources: ["S1"] },
+        { category: "costs", title: "Made up tip here", advice: "Cites a story that wasn't provided.", sources: ["S1", "S9"] },
+      ],
+    });
+    const result = validateRecommendations(mixed, refs, meta);
+    expect(result?.recommendations).toHaveLength(1);
+    expect(result?.recommendations[0].title).toBe("Supported tip here");
+    expect(result?.recommendations[0].sources).toEqual([{ id: "a", title: "Late taxi" }]);
+  });
+
   it("rejects sources from another destination", () => {
     const mixed = buildEvidencePayload("Testville", [story({ id: "other", destinationId: "dest-2" })]);
     const result = validateRecommendations(

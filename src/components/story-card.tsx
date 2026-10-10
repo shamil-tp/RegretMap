@@ -1,11 +1,11 @@
 import { ArrowRight, MapPin, Navigation } from "lucide-react";
 import Link from "next/link";
 import { HelpfulButton, type HelpfulProps } from "@/components/helpful-button";
+import { CategoryBadge } from "@/components/category-badge";
 import { Badge } from "@/components/ui/badge";
 import {
   formatPublishedDate,
   formatTravelDate,
-  storyCategories,
   type StoryWithDestination,
 } from "@/lib/stories";
 
@@ -27,12 +27,12 @@ export function StoryCard({
   return (
     <article
       id={`story-${story.id}`}
-      className={`scroll-mt-24 py-6 transition-colors ${
-        highlighted ? "-mx-3 rounded-lg bg-accent-soft/60 px-3" : ""
+      className={`scroll-mt-24 rounded-lg border bg-card p-5 shadow-sm transition-colors sm:p-6 ${
+        highlighted ? "border-coral ring-2 ring-coral/30" : "border-line"
       }`}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <Badge tone="accent">{storyCategories[story.category]}</Badge>
+        <CategoryBadge category={story.category} />
         {travelDate && <Badge>Travelled {travelDate}</Badge>}
         {story.isDemo && <Badge tone="demo">Demo example</Badge>}
         {story.source === "editorial" && <Badge>Travel note</Badge>}
@@ -55,7 +55,7 @@ export function StoryCard({
       </p>
 
       {story.lesson && (
-        <div className="mt-4 border-l-2 border-accent pl-4">
+        <div className="mt-4 rounded-md bg-butter/50 px-4 py-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
             {story.source === "editorial" ? "The lesson" : <>What I&apos;d do differently</>}
           </p>
@@ -94,7 +94,7 @@ export function StoryCard({
 
 export function StoryCardSkeleton() {
   return (
-    <div aria-hidden className="animate-pulse py-6">
+    <div aria-hidden className="animate-pulse rounded-lg border border-line bg-card p-5">
       <div className="flex gap-2">
         <div className="h-5 w-20 rounded-full bg-surface" />
         <div className="h-5 w-28 rounded-full bg-surface" />

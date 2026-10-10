@@ -6,6 +6,7 @@ import { Suspense } from "react";
 import { renderDataError, StoryListSkeleton } from "@/components/data-states";
 import { ExploreMap } from "@/components/map/explore-map";
 import { StoryActions } from "@/components/story-actions";
+import { DiscussionHeading, StoryComments } from "@/components/story-comments";
 import { Badge } from "@/components/ui/badge";
 import {
   DataUnavailableError,
@@ -13,6 +14,8 @@ import {
   getStoryById,
   listStoriesForDestination,
 } from "@/lib/data";
+import { countComments } from "@/lib/comments";
+import { getStoryComments } from "@/lib/comments-data";
 import { getViewer } from "@/lib/supabase/session";
 import { storiesToMapPoints } from "@/lib/map";
 import {
@@ -182,6 +185,16 @@ async function StoryContent({ params }: Pick<Props, "params">) {
               }
             />
           </div>
+
+          <section
+            id="discussion"
+            aria-labelledby="discussion-heading"
+            className="mt-12 scroll-mt-24 rounded-xl bg-strawberry/30 p-4 sm:p-6"
+          >
+            <Suspense fallback={<DiscussionSkeleton />}>
+              <StoryDiscussion storyId={story.id} signedIn={Boolean(viewer)} viewerId={viewer?.id ?? null} />
+            </Suspense>
+          </section>
         </article>
 
         <aside className="space-y-10 lg:sticky lg:top-6 lg:self-start">
@@ -227,5 +240,46 @@ async function StoryContent({ params }: Pick<Props, "params">) {
         </aside>
       </div>
     </>
+  );
+}
+
+async function StoryDiscussion({
+  storyId,
+  signedIn,
+  viewerId,
+}: {
+  storyId: string;
+  signedIn: boolean;
+  viewerId: string | null;
+}) {
+  const comments = await getStoryComments(storyId, viewerId);
+  if (comments.status === "unavailable") {
+    return (
+      <>
+        <DiscussionHeading count={null} />
+        <p role="status" className="mt-4 rounded-lg bg-card px-4 py-3 text-sm text-ink-muted">
+          Comments aren&apos;t available right now. Please try again later.
+        </p>
+      </>
+    );
+  }
+  const count = countComments(comments.threads);
+  return (
+    <>
+      <DiscussionHeading count={count} />
+      <div className="mt-4">
+        <StoryComments storyId={storyId} threads={comments.threads} count={count} signedIn={signedIn} />
+      </div>
+    </>
+  );
+}
+
+function DiscussionSkeleton() {
+  return (
+    <div aria-hidden className="animate-pulse space-y-3">
+      <div className="h-7 w-48 rounded bg-card" />
+      <div className="h-20 rounded-lg bg-card" />
+      <div className="h-16 rounded-lg bg-card" />
+    </div>
   );
 }

@@ -11,6 +11,7 @@ Read `CLAUDE.md` first (product rules + phase plan), then this file.
 | 10 | Auth, Helpful reactions, `/moderate`, location autocomplete | Done, committed as `8f4039c` ("implemented authentication") |
 | Post-10 change | **Stories publish immediately** (no moderator approval) + confirmation redirect to production | Done locally, **NOT committed** |
 | 11 (owner-defined) | India-wide editorial content + story provenance | Done locally, NOT committed; SQL not yet run on Supabase (see §2b) |
+| 12 (owner-defined) | Comments + replies, grounded recs/chat refinements, macaron redesign | Done locally, NOT committed; comments migration not yet applied (see §2c) |
 | Next | Quality, accessibility, launch readiness (CLAUDE.md §10 Phase 11) | Not started |
 
 Production URL: **https://regret-map.shamiltp.me**
@@ -62,6 +63,25 @@ say "saved but isn't public yet"; now stories go live immediately.
   5 seed destinations (reversible; nothing deleted).
 - SQL run order: migration → seed_india_editorial.sql → india_seed_check.sql → (optional) retire_demo_seed.sql.
 - Feed shows 20 cards with "Show more"; home lists top 10 destinations + a disclosure; `STORY_LIMIT.all` = 400.
+
+## 2c. Phase 12 — comments, AI refinements, redesign (2026-10-12)
+
+- Live DB check 2026-10-12: `stories.source` (Phase 11), Phase 10 tables and `story_comments` are all
+  still missing. The app degrades gracefully for each (fallback queries / "unavailable" states).
+- Comments: `supabase/migrations/20261012100000_story_comments.sql` (also in `setup_all.sql`),
+  RLS test `supabase/tests/comments_rls_check.sql` (rolls back). Table `story_comments`, one reply level,
+  composite FK keeps replies on the same story, `user_id` = `auth.uid()` default and not
+  insertable/readable, display name set by trigger (`display_name` metadata or "Traveller XXXX"),
+  owner-only edit (body column grant + RLS), delete via `delete_story_comment()` (placeholder if replies),
+  `my_story_comment_ids()` for "You"/edit controls. Moderator hide: `update story_comments set status='hidden'`.
+- Code: `src/lib/comments.ts`, `src/lib/comments-data.ts`, `src/app/stories/comment-actions.ts`,
+  `src/components/story-comments.tsx`, discussion section on `/stories/[id]`.
+- Recommendations now drop individual unsupported tips (`validateRecommendations`); chat prompt forbids
+  general knowledge; UI renamed "Before you go — Little lessons…" and "Ask travellers".
+- Design tokens in `globals.css` are the macaron palette; `accent` is #c93f52 (AA contrast),
+  #ff7777 is `coral` (decorative only). `CategoryBadge` colours categories.
+- SQL order: Phase 10 migration → 20261011170000_story_source → seed_india_editorial → india_seed_check →
+  20261012100000_story_comments → comments_rls_check.
 
 ## 3. Owner must still do (remote, manual)
 

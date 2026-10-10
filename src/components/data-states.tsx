@@ -37,7 +37,7 @@ export function NoStoriesYet({ destinationName }: { destinationName?: string }) 
 
 export function StoryListSkeleton({ count = 3 }: { count?: number }) {
   return (
-    <div className="divide-y divide-line">
+    <div className="space-y-4">
       {Array.from({ length: count }, (_, i) => (
         <StoryCardSkeleton key={i} />
       ))}

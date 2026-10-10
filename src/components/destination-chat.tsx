@@ -25,10 +25,10 @@ type Message =
   | { id: number; role: "notice"; text: string; retryQuestion?: string };
 
 const SUGGESTIONS = [
-  "What mistakes should I avoid?",
-  "Any transport problems reported?",
-  "What budget surprises have travellers mentioned?",
-  "What should I pack?",
+  "What mistakes should I avoid here?",
+  "What should I prepare before visiting?",
+  "What do travellers say about getting around?",
+  "What should I know before planning my trip?",
 ];
 
 export function DestinationChat({ slug, destinationName }: { slug: string; destinationName: string }) {
@@ -104,14 +104,15 @@ export function DestinationChat({ slug, destinationName }: { slug: string; desti
   }
 
   return (
-    <section aria-labelledby="chat-heading" className="rounded-lg border border-line bg-canvas">
-      <div className="border-b border-line px-5 py-4">
-        <h2 id="chat-heading" className="text-lg font-semibold text-ink">
-          Ask about {destinationName}
+    <section aria-labelledby="chat-heading" className="rounded-lg border border-line bg-card shadow-sm">
+      <div className="rounded-t-lg border-b border-line bg-sky/60 px-5 py-4">
+        <h2 id="chat-heading" className="font-display text-xl font-semibold text-ink">
+          Ask travellers
         </h2>
         <p className="mt-1 text-sm text-ink-muted">
-          Answers are written by AI from published RegretMap stories about {destinationName} —
-          personal experiences, not verified facts. Conversations aren&apos;t saved.
+          Get answers from experiences shared on RegretMap about {destinationName}. Answers
+          only use published stories — if they don&apos;t cover your question, we&apos;ll say so.
+          Conversations aren&apos;t saved.
         </p>
       </div>
 
@@ -124,7 +125,7 @@ export function DestinationChat({ slug, destinationName }: { slug: string; desti
       >
         {messages.length === 0 && (
           <div>
-            <p className="text-sm text-ink-muted">Try asking:</p>
+            <p className="text-sm text-ink-muted">You could ask:</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {SUGGESTIONS.map((suggestion) => (
                 <button
@@ -132,7 +133,7 @@ export function DestinationChat({ slug, destinationName }: { slug: string; desti
                   type="button"
                   onClick={() => ask(suggestion)}
                   disabled={pending}
-                  className="rounded-full border border-line px-3 py-1.5 text-sm text-ink-muted hover:border-ink-muted hover:text-ink disabled:opacity-50"
+                  className="min-h-10 rounded-full border border-line bg-canvas px-3.5 py-1.5 text-left text-sm text-ink hover:border-coral hover:bg-strawberry/40 disabled:opacity-50"
                 >
                   {suggestion}
                 </button>
@@ -144,16 +145,21 @@ export function DestinationChat({ slug, destinationName }: { slug: string; desti
         {messages.map((message) =>
           message.role === "user" ? (
             <div key={message.id} className="flex justify-end">
-              <p className="max-w-[85%] rounded-lg bg-ink px-3.5 py-2 text-sm text-white">
+              <p className="max-w-[85%] rounded-lg rounded-br-sm bg-lavender px-3.5 py-2 text-sm text-ink">
                 <span className="sr-only">You: </span>
                 {message.text}
               </p>
             </div>
           ) : message.role === "assistant" ? (
             <div key={message.id} className="max-w-[92%]">
-              <div className="rounded-lg bg-surface px-3.5 py-3 text-[0.95rem] leading-relaxed text-ink">
+              <div className="rounded-lg rounded-bl-sm border border-line bg-canvas px-3.5 py-3 text-[0.95rem] leading-relaxed text-ink">
                 <span className="sr-only">RegretMap: </span>
                 <p className="whitespace-pre-line">{message.text}</p>
+                {!message.sufficientEvidence && (
+                  <p className="mt-2 rounded-md bg-butter/70 px-2.5 py-1.5 text-xs text-ink">
+                    The available RegretMap stories don&apos;t fully answer this.
+                  </p>
+                )}
                 {message.sources.length > 0 ? (
                   <div className="mt-3 border-t border-line pt-2">
                     <p className="flex flex-wrap items-center gap-2 text-xs font-medium text-ink-muted">
@@ -176,7 +182,7 @@ export function DestinationChat({ slug, destinationName }: { slug: string; desti
                   </div>
                 ) : (
                   <p className="mt-2 text-xs text-ink-muted">
-                    No published stories cover this directly.
+                    No published story covers this, so there are no sources to show.
                   </p>
                 )}
               </div>

@@ -84,7 +84,7 @@ async function DestinationContent({ params }: Pick<Props, "params">) {
 function DestinationHeader({ destination }: { destination: Destination }) {
   const location = formatLocation(destination);
   return (
-    <section className="border-b border-line">
+    <section className="border-b border-line bg-sky/50">
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
         <nav aria-label="Breadcrumb" className="text-sm text-ink-muted">
           <ol className="flex items-center gap-2">

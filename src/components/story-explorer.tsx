@@ -124,7 +124,7 @@ export function StoryExplorer({
         </div>
 
         {visible.length > 0 && (
-          <div className="mt-2 divide-y divide-line">
+          <div className="mt-4 space-y-4">
             {shown.map((story) => (
               <StoryCard
                 key={story.id}
@@ -146,7 +146,7 @@ export function StoryExplorer({
           </div>
         )}
         {shown.length < visible.length && (
-          <div className="mt-4 flex flex-col items-center gap-1 border-t border-line pt-6">
+          <div className="mt-6 flex flex-col items-center gap-1">
             <button
               type="button"
               onClick={() => setPage({ list: visible, count: shownCount + FEED_PAGE })}

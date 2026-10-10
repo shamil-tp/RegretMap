@@ -163,8 +163,9 @@ export function validateRecommendations(
   for (const rec of output.recommendations) {
     const refsUsed = [...new Set(rec.sources)];
     const stories = refsUsed.map((ref) => refs.get(ref));
-    // A fabricated reference invalidates the whole answer.
-    if (stories.some((story) => !story || story.destinationId !== meta.destinationId)) return null;
+    // A recommendation citing anything we didn't send (or another destination's
+    // story) is unsupported: drop it, keep the validly sourced ones.
+    if (stories.some((story) => !story || story.destinationId !== meta.destinationId)) continue;
     recommendations.push({
       category: rec.category,
       title: rec.title,
@@ -174,6 +175,8 @@ export function validateRecommendations(
       mixedExperiences: rec.mixed_experiences ?? false,
     });
   }
+
+  if (recommendations.length === 0) return null;
 
   return {
     destinationId: meta.destinationId,

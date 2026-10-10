@@ -1,12 +1,15 @@
 import { Sparkles } from "lucide-react";
 import Link from "next/link";
+import { CategoryBadge } from "@/components/category-badge";
 import { Badge } from "@/components/ui/badge";
+
+/** Rotating macaron surfaces so tips read like separate notes. */
+const TIP_SURFACES = ["bg-peach/50", "bg-mint/50", "bg-sky/50", "bg-lavender/50", "bg-butter/50"];
 import { evidenceLabel } from "@/lib/before-you-go";
 import { getDestinationRecommendations } from "@/lib/recommendations/service";
 import {
   formatPublishedDate,
   pluralize,
-  storyCategories,
   type Destination,
   type StoryWithDestination,
 } from "@/lib/stories";
@@ -42,23 +45,26 @@ export async function AiRecommendations({
 
   const { data } = result;
   return (
-    <div className="mt-6 rounded-lg border border-line bg-surface p-5 sm:p-6">
+    <div className="mt-6">
       <div className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
         <Sparkles aria-hidden className="size-3.5 text-accent" />
         <span>
-          AI summary of {pluralize(data.storyCount, "published story", "published stories")}
+          Summarised from {pluralize(data.storyCount, "published story", "published stories")}
         </span>
         {data.fromDemo && <Badge tone="demo">Generated from demo example stories</Badge>}
       </div>
       <p className="mt-3 max-w-3xl leading-relaxed text-ink">{data.overview}</p>
 
-      <ol className="mt-5 space-y-5">
+      <ol className="mt-5 grid gap-4 sm:grid-cols-2">
         {data.recommendations.map((rec, index) => (
-          <li key={index} className="border-l-2 border-accent pl-4">
+          <li
+            key={index}
+            className={`rounded-lg border border-line p-5 shadow-sm ${TIP_SURFACES[index % TIP_SURFACES.length]}`}
+          >
             <div className="flex flex-wrap items-center gap-2">
-              <Badge tone="accent">{storyCategories[rec.category]}</Badge>
-              <h3 className="font-semibold text-ink">{rec.title}</h3>
+              <CategoryBadge category={rec.category} />
             </div>
+            <h3 className="mt-2 font-semibold text-ink">{rec.title}</h3>
             <p className="mt-1 text-[0.95rem] leading-relaxed text-ink">{rec.advice}</p>
             <p className="mt-1.5 text-xs text-ink-muted">
               {evidenceLabel(
@@ -67,8 +73,9 @@ export async function AiRecommendations({
                 false,
               )}
               {rec.mixedExperiences && " · Experiences differ"}
-              {" · "}
-              <span className="sr-only">Sources: </span>
+            </p>
+            <p className="mt-2 text-xs font-medium text-ink-muted">Based on these stories:</p>
+            <p className="mt-0.5 text-sm">
               {rec.sources.map((source, i) => (
                 <span key={source.id}>
                   {i > 0 && ", "}

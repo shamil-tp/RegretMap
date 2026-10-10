@@ -7,7 +7,7 @@ import { signInAction, signUpAction, type AuthFormState } from "@/app/auth/actio
 import { buttonClasses } from "@/components/ui/button";
 
 const inputClasses =
-  "w-full rounded-md border border-line bg-canvas px-3 py-2.5 text-sm text-ink placeholder:text-ink-muted focus:border-ink-muted";
+  "w-full rounded-md border border-line bg-card px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30";
 
 export function AuthForm({
   mode,
@@ -27,7 +27,7 @@ export function AuthForm({
 
   if (state.status === "check_email") {
     return (
-      <div role="status" className="rounded-lg border border-line bg-surface px-5 py-6">
+      <div role="status" className="rounded-lg border border-line bg-mint/60 px-5 py-6">
         <MailCheck aria-hidden className="size-6 text-accent" />
         <h2 className="mt-3 font-semibold text-ink">Check your email</h2>
         <p className="mt-1 text-sm text-ink-muted">
@@ -39,7 +39,7 @@ export function AuthForm({
   }
 
   return (
-    <form action={formAction} className="space-y-5">
+    <form action={formAction} className="space-y-5 rounded-xl border border-line bg-card p-6 shadow-sm">
       {notice && (
         <p className="rounded-md bg-surface px-3 py-2.5 text-sm text-ink-muted">{notice}</p>
       )}

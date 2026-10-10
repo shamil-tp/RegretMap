@@ -257,7 +257,7 @@ export function DestinationSearch({
               placeholder="Try Manali, Munnar or Jaipur"
               maxLength={PLACE_QUERY_MAX}
               autoComplete="off"
-              className="w-full rounded-md border border-line bg-canvas py-2.5 pl-9 pr-10 text-sm text-ink placeholder:text-ink-muted focus:border-ink-muted"
+              className="w-full rounded-full border border-line bg-card py-3 pl-10 pr-10 text-sm text-ink shadow-sm placeholder:text-ink-muted focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
             />
             <div className="absolute right-2.5 top-1/2 flex -translate-y-1/2 items-center">
               {isLoading ? (
@@ -283,7 +283,7 @@ export function DestinationSearch({
       </form>
 
       {isOpen && (
-        <div className="absolute inset-x-0 top-full z-50 mt-1.5 max-h-96 overflow-y-auto rounded-lg border border-line bg-canvas p-1 shadow-lg">
+        <div className="absolute inset-x-0 top-full z-50 mt-1.5 max-h-96 overflow-y-auto rounded-lg border border-line bg-card p-1.5 shadow-lg">
           <ul id={listId} role="listbox" aria-label="Destination suggestions">
             {localMatches.length > 0 && (
               <li role="presentation" className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">

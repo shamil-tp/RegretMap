@@ -1,8 +1,13 @@
-type BadgeTone = "neutral" | "accent" | "demo";
+type BadgeTone = "neutral" | "accent" | "demo" | "mint" | "sky" | "butter" | "lavender" | "peach";
 
 const tones: Record<BadgeTone, string> = {
-  neutral: "bg-surface text-ink-muted",
-  accent: "bg-accent-soft text-accent-hover",
+  neutral: "bg-lavender/60 text-ink",
+  accent: "bg-strawberry text-ink",
+  mint: "bg-mint text-ink",
+  sky: "bg-sky text-ink",
+  butter: "bg-butter text-ink",
+  lavender: "bg-lavender text-ink",
+  peach: "bg-peach text-ink",
   demo: "border border-dashed border-ink-muted/50 text-ink-muted",
 };
 
