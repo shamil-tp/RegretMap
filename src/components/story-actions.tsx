@@ -2,7 +2,7 @@
 
 import { Flag } from "lucide-react";
 import { useState } from "react";
-import { HelpfulButton, type HelpfulProps } from "@/components/helpful-button";
+import { StoryReactions, type HelpfulProps } from "@/components/helpful-button";
 
 /** Helpful (saved, signed-in users) and Report (placeholder, nothing sent yet). */
 export function StoryActions({ isDemo, helpful }: { isDemo: boolean; helpful?: HelpfulProps }) {
@@ -14,7 +14,7 @@ export function StoryActions({ isDemo, helpful }: { isDemo: boolean; helpful?: H
   return (
     <div>
       <div className="flex flex-wrap gap-2">
-        {helpful && <HelpfulButton {...helpful} />}
+        {helpful && <StoryReactions {...helpful} />}
         <button
           type="button"
           aria-expanded={reportOpen}
@@ -31,7 +31,7 @@ export function StoryActions({ isDemo, helpful }: { isDemo: boolean; helpful?: H
           Reporting isn&apos;t available yet.{" "}
           {isDemo
             ? "This story is a demo example and isn't a real submission."
-            : "Stories are reviewed by a moderator before they're published."}
+            : "Stories go live straight away; a moderator can hide anything that breaks the rules."}
         </p>
       )}
     </div>

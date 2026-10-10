@@ -16,6 +16,7 @@ import {
 } from "@/lib/mappers";
 import type { CountrySummary, Destination, StorySummary, StoryWithDestination } from "@/lib/stories";
 import type { HelpfulState } from "@/lib/helpful";
+import { cleanReactionCounts, isReactionType, type ReactionType } from "@/lib/reactions";
 import { getSupabase } from "@/lib/supabase/server";
 import { createSessionClient } from "@/lib/supabase/session";
 
@@ -260,30 +261,41 @@ export async function getHelpfulState(
 ): Promise<HelpfulState> {
   const ids = [...new Set(storyIds)].filter(isUuid).slice(0, 300);
   const empty: HelpfulState = { available: false, counts: {}, liked: [], signedIn: Boolean(viewerId) };
-  if (ids.length === 0) return { ...empty, available: true };
+  if (ids.length === 0) return { ...empty, available: true, emoji: {}, mine: {} };
   try {
     await connection();
-    const { data, error } = await getSupabase()
-      .from("stories")
-      .select("id, helpful_count")
-      .in("id", ids);
-    if (error) throw new Error(error.code ?? error.message);
-    const counts = Object.fromEntries(
-      (data as { id: string; helpful_count: number }[]).map((row) => [row.id, row.helpful_count]),
-    );
+    // reaction_counts arrives with migration 20261012120000; fall back to
+    // helpful-only counts until it's applied.
+    let rows: { id: string; helpful_count: number; reaction_counts?: unknown }[];
+    let emojiEnabled = true;
+    const withEmoji = await getSupabase().from("stories").select("id, helpful_count, reaction_counts").in("id", ids);
+    if (withEmoji.error?.code === "42703") {
+      emojiEnabled = false;
+      const plain = await getSupabase().from("stories").select("id, helpful_count").in("id", ids);
+      if (plain.error) throw new Error(plain.error.code ?? plain.error.message);
+      rows = plain.data as typeof rows;
+    } else {
+      if (withEmoji.error) throw new Error(withEmoji.error.code ?? withEmoji.error.message);
+      rows = withEmoji.data as typeof rows;
+    }
+    const counts = Object.fromEntries(rows.map((row) => [row.id, row.helpful_count]));
+    const emoji = emojiEnabled
+      ? Object.fromEntries(rows.map((row) => [row.id, cleanReactionCounts(row.reaction_counts)]))
+      : undefined;
 
     let liked: string[] = [];
+    const mine: Record<string, ReactionType[]> = {};
     if (viewerId) {
       const client = await createSessionClient();
-      const own = await client
-        .from("story_reactions")
-        .select("story_id")
-        .eq("reaction_type", "helpful")
-        .in("story_id", ids);
+      const own = await client.from("story_reactions").select("story_id, reaction_type").in("story_id", ids);
       if (own.error) throw new Error(own.error.code ?? own.error.message);
-      liked = (own.data as { story_id: string }[]).map((row) => row.story_id);
+      for (const row of own.data as { story_id: string; reaction_type: string }[]) {
+        if (row.reaction_type === "helpful") liked.push(row.story_id);
+        if (isReactionType(row.reaction_type)) (mine[row.story_id] ??= []).push(row.reaction_type);
+      }
+      liked = [...new Set(liked)];
     }
-    return { available: true, counts, liked, signedIn: Boolean(viewerId) };
+    return { available: true, counts, liked, signedIn: Boolean(viewerId), emoji, mine: emoji ? mine : undefined };
   } catch (error) {
     console.error(`[data] getHelpfulState failed: ${error instanceof Error ? error.message : "unknown"}`);
     return empty;

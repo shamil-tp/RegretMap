@@ -5,13 +5,27 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRef, useState } from "react";
 import { setHelpful } from "@/app/stories/helpful-action";
+import { ReactionBar } from "@/components/reaction-bar";
+import type { ReactionType } from "@/lib/reactions";
 
 export type HelpfulProps = {
   storyId: string;
   count: number;
   helpful: boolean;
   signedIn: boolean;
+  /** Emoji reaction counts; present once the emoji migration is applied. */
+  emoji?: Partial<Record<ReactionType, number>>;
+  mine?: ReactionType[];
 };
+
+/** Regret emoji bar when available, otherwise the original Helpful button. */
+export function StoryReactions(props: HelpfulProps) {
+  return props.emoji ? (
+    <ReactionBar storyId={props.storyId} counts={props.emoji} mine={props.mine ?? []} signedIn={props.signedIn} />
+  ) : (
+    <HelpfulButton {...props} />
+  );
+}
 
 /** "Helpful" toggle: optimistic, rolled back if the server doesn't confirm. */
 export function HelpfulButton({ storyId, count, helpful, signedIn }: HelpfulProps) {

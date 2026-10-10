@@ -180,6 +180,8 @@ async function StoryContent({ params }: Pick<Props, "params">) {
                       count: helpful.counts[story.id] ?? 0,
                       helpful: helpful.liked.includes(story.id),
                       signedIn: helpful.signedIn,
+                      emoji: helpful.emoji ? (helpful.emoji[story.id] ?? {}) : undefined,
+                      mine: helpful.mine?.[story.id] ?? [],
                     }
                   : undefined
               }

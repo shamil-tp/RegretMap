@@ -1,6 +1,6 @@
 import { ArrowRight, MapPin, Navigation } from "lucide-react";
 import Link from "next/link";
-import { HelpfulButton, type HelpfulProps } from "@/components/helpful-button";
+import { StoryReactions, type HelpfulProps } from "@/components/helpful-button";
 import { CategoryBadge } from "@/components/category-badge";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -27,7 +27,7 @@ export function StoryCard({
   return (
     <article
       id={`story-${story.id}`}
-      className={`scroll-mt-24 rounded-lg border bg-card p-5 shadow-sm transition-colors sm:p-6 ${
+      className={`scroll-mt-24 animate-fade-up rounded-lg border bg-card p-5 shadow-sm transition-[box-shadow,transform,border-color] duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-6 ${
         highlighted ? "border-coral ring-2 ring-coral/30" : "border-line"
       }`}
     >
@@ -82,7 +82,7 @@ export function StoryCard({
             Show on map
           </button>
         )}
-        {helpful && <HelpfulButton {...helpful} />}
+        {helpful && <StoryReactions {...helpful} />}
         <span className="text-ink-muted sm:ml-auto">
           {story.isDemo ? "Sample date" : "Published"}{" "}
           {formatPublishedDate(story.publishedAt)}

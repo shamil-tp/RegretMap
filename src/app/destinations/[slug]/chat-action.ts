@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { CHAT_LIMITS } from "@/lib/chat/evidence";
 import { answerDestinationQuestion } from "@/lib/chat/service";
+import { isTripPlanningRequest, PLANNING_REFERRAL, withPlanningNotes } from "@/lib/chat/trip-planning";
 import { clientIp, createRateLimiter } from "@/lib/rate-limit";
 
 /** Questions per IP, plus an IP-independent total (client IPs can be forged). */
@@ -75,7 +76,11 @@ export async function askDestinationQuestion(input: unknown): Promise<ChatAction
     case "insufficient":
       return {
         status: "insufficient",
-        message: `There aren't any stories about ${result.destinationName} on RegretMap yet, so there's nothing to answer from. Been there? Share your experience and help the next traveller.`,
+        message: withPlanningNotes(
+          parsed.data.question,
+          result.destinationName,
+          `There aren't any stories about ${result.destinationName} on RegretMap yet, so there's nothing to answer from. Been there? Share your experience and help the next traveller.`,
+        ),
       };
     case "not_found":
       return { status: "error", retryable: false, message: "This destination couldn't be found." };
@@ -83,8 +88,11 @@ export async function askDestinationQuestion(input: unknown): Promise<ChatAction
       if (result.reason !== "not_configured" && result.related && result.related.length > 0) {
         return {
           status: "fallback",
-          message:
-            "The answer helper is busy right now, so here are the stories most related to your question instead.",
+          message: isTripPlanningRequest(parsed.data.question)
+            ? `The answer helper is busy right now, so here are the stories most related to your question instead.
+
+${PLANNING_REFERRAL}`
+            : "The answer helper is busy right now, so here are the stories most related to your question instead.",
           sources: result.related,
         };
       }

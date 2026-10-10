@@ -207,7 +207,7 @@ export function DestinationChat({ slug, destinationName }: { slug: string; desti
               className="flex flex-wrap items-center gap-3 rounded-md border border-line px-3.5 py-2.5 text-sm text-ink-muted"
             >
               <AlertCircle aria-hidden className="size-4 shrink-0 text-accent" />
-              <span className="flex-1">{message.text}</span>
+              <span className="flex-1 whitespace-pre-line">{message.text}</span>
               {message.retryQuestion && (
                 <button
                   type="button"

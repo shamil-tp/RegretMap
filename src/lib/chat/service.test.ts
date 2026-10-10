@@ -169,3 +169,13 @@ describe("anti-hallucination guards (adversarial model output)", () => {
     expect(generateJson).not.toHaveBeenCalled();
   });
 });
+
+describe("trip-planning answers", () => {
+  it("wraps a grounded answer with the scope note and The Visa Guy referral", async () => {
+    const result = await ask("I want to go to Manali, give me full guidelines");
+    if (result.status !== "answer") throw new Error("expected an answer");
+    expect(result.answer.answer).toMatch(/^I can only share what travellers have posted on RegretMap about Manali/);
+    expect(result.answer.answer).toMatch(/The Visa Guy/);
+    expect(result.answer.sources.map((s) => s.id)).toEqual(["m1"]);
+  });
+});

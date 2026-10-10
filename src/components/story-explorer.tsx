@@ -92,6 +92,8 @@ export function StoryExplorer({
           ? {
               ...previous,
               counts: { ...previous.counts, ...result.helpful.counts },
+              emoji: result.helpful.emoji ? { ...previous.emoji, ...result.helpful.emoji } : previous.emoji,
+              mine: result.helpful.mine ? { ...previous.mine, ...result.helpful.mine } : previous.mine,
               liked: [...new Set([...previous.liked, ...result.helpful.liked])],
             }
           : previous,
@@ -186,6 +188,8 @@ export function StoryExplorer({
                           count: helpfulState.counts[story.id] ?? 0,
                           helpful: helpfulState.liked.includes(story.id),
                           signedIn: helpfulState.signedIn,
+                          emoji: helpfulState.emoji ? (helpfulState.emoji[story.id] ?? {}) : undefined,
+                          mine: helpfulState.mine?.[story.id] ?? [],
                         }
                       : undefined
                   }

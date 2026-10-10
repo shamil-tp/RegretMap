@@ -26,6 +26,10 @@
   --color-sky: #dceeff;
   --color-lavender: #e9dfff;
 
+  /* Gentle motion (all disabled under prefers-reduced-motion below). */
+  --animate-emoji-pop: emoji-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  --animate-fade-up: fade-up 320ms ease-out both;
+
   /* Softer, rounder corners everywhere. */
   --radius-md: 0.75rem;
   --radius-lg: 1.25rem;
@@ -81,6 +85,26 @@ html .leaflet-popup-content {
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
 }
 
+/* Category emoji pins: a white disc with a coral ring. */
+.map-pin--emoji {
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--color-coral);
+  background: #ffffff;
+  font-size: 15px;
+  line-height: 1;
+  transition: transform 150ms ease-out;
+}
+
+.map-pin--emoji:hover {
+  transform: scale(1.15);
+}
+
+.map-pin--emoji.map-pin--highlighted {
+  font-size: 20px;
+  border-width: 3px;
+}
+
 .map-pin--selected {
   background: var(--color-ink);
 }
@@ -107,4 +131,15 @@ html .leaflet-heatmap-layer {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+@keyframes emoji-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.6) rotate(-10deg); }
+  100% { transform: scale(1); }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
 }

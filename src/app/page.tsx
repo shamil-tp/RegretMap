@@ -32,7 +32,12 @@ export default function ExplorePage({ searchParams }: PageProps<"/">) {
     <>
       <section className="border-b border-line bg-strawberry/30">
         <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
-          <h1 className="max-w-2xl font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+          <p className="flex flex-wrap gap-2 text-sm font-medium text-ink">
+            <span className="rounded-full bg-card px-3 py-1 shadow-sm">✈️ Real trips</span>
+            <span className="rounded-full bg-card px-3 py-1 shadow-sm">😬 Real regrets</span>
+            <span className="rounded-full bg-card px-3 py-1 shadow-sm">💡 Real lessons</span>
+          </p>
+          <h1 className="mt-4 max-w-2xl font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
             Every journey leaves a lesson.
           </h1>
           <p className="mt-3 max-w-xl text-base leading-relaxed text-ink-muted">
