@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+/* RegretMap design tokens — light theme only. */
+@theme {
+  --color-canvas: #ffffff;
+  --color-surface: #f6f6f5;
+  --color-line: #e6e4e1;
+  --color-ink: #1d2125;
+  --color-ink-muted: #5a6169;
+  --color-accent: #d1383d;
+  --color-accent-hover: #b02e33;
+  --color-accent-soft: #fdeeed;
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
