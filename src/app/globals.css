@@ -30,3 +30,31 @@ body {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
+
+/*
+ * Leaflet map: match the app's typography and accent. leaflet.css loads later
+ * with the lazily loaded map, so overrides are prefixed with `html` to win.
+ */
+html .leaflet-container {
+  font-family: var(--font-sans);
+}
+
+html .leaflet-popup-content-wrapper {
+  border-radius: 0.5rem;
+}
+
+html .leaflet-popup-content {
+  margin: 0.75rem 1rem;
+  min-width: 12rem;
+}
+
+.map-pin {
+  border: 2px solid #ffffff;
+  border-radius: 9999px;
+  background: var(--color-accent);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
+}
+
+.map-pin--selected {
+  background: var(--color-ink);
+}

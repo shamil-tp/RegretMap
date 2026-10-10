@@ -23,6 +23,9 @@ export type StoryPreview = {
   travelMonth?: number;
   body: string;
   lesson?: string;
+  /** Approximate story location; destination-only stories may omit it. */
+  latitude?: number;
+  longitude?: number;
   /** True for development-only illustrative content. */
   isDemo: boolean;
 };
