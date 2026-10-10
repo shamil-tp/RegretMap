@@ -1,9 +1,29 @@
 import { Info } from "lucide-react";
 import { DestinationSearch } from "@/components/destination-search";
-import { MapPlaceholder } from "@/components/map-placeholder";
+import { ExploreMap } from "@/components/map/explore-map";
 import { StoryFeed } from "@/components/story-feed";
 import { buttonClasses } from "@/components/ui/button";
 import { demoStories } from "@/lib/demo-stories";
+import type { MapPoint } from "@/lib/map";
+
+/** Only the fields the map needs are sent to the client map component. */
+function demoMapPoints(): MapPoint[] {
+  return demoStories.flatMap((story) =>
+    story.latitude != null && story.longitude != null
+      ? [
+          {
+            id: story.id,
+            latitude: story.latitude,
+            longitude: story.longitude,
+            title: story.title,
+            place: `${story.destination}, ${story.region}`,
+            category: story.category,
+            isDemo: story.isDemo,
+          },
+        ]
+      : [],
+  );
+}
 
 function demoDestinations() {
   const byName = new Map<string, { region: string; count: number }>();
@@ -41,7 +61,7 @@ export default function ExplorePage() {
             Explore the map
           </h2>
           <div className="mt-4">
-            <MapPlaceholder />
+            <ExploreMap points={demoMapPoints()} />
           </div>
 
           <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-ink-muted">
