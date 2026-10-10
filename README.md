@@ -11,11 +11,12 @@ built from those stories.
 RegretMap is about **destinations, places, journeys, activities and travel
 conditions** — not a hotel, room or restaurant rating site.
 
-> **Current status: development preview (Phase 4 of 11).**
+> **Current status: development preview (Phase 5 of 11).**
 > Destinations and stories are read from Supabase (PostgreSQL) with Row Level
-> Security. The current content is a **clearly labelled demo seed** written for
-> development — not real community submissions. There are no user accounts,
-> story submission or AI yet. See the [roadmap](#roadmap).
+> Security, and travellers can submit stories, which are saved as **pending review**
+> (not public until a moderator publishes them). The current public content is a
+> **clearly labelled demo seed** written for development. There are no user
+> accounts or AI yet. See the [roadmap](#roadmap).
 
 ---
 
@@ -80,6 +81,22 @@ conditions** — not a hotel, room or restaurant rating site.
 - "Helpful" and "Report" buttons are **local placeholders only** — nothing is saved
   or sent yet.
 
+### Share an experience (`/submit`)
+
+- Reached from the header, the mobile menu, and the "Share your experience" section
+  (destination pages preselect their destination with `/submit?destination=<slug>`).
+- Fields: destination (required, from the database), title, what happened, what went
+  wrong, what you learned and advice (all required, with character counts),
+  category, optional place, travel month/year and an optional **map pin** near the
+  destination, plus a required "this is my own experience" confirmation.
+- Validation runs in the browser for quick feedback and again on the server, with an
+  error summary that links to each field.
+- The submit button is disabled while sending; a one-time submission key makes
+  double-clicks and retries harmless.
+- On success: "submitted for review — it isn't public yet". On failure (validation,
+  rate limit, database or network) an honest message is shown and the text is kept.
+- Stories are shown anonymously; no name, email or account is collected.
+
 ### General
 
 - Light theme, responsive from phones to desktop, visible keyboard focus, skip link.
@@ -139,7 +156,7 @@ phases.
 | `PHOTON_API_URL` | No | Yes (optional) | Self-hosted Photon endpoint (https). Empty uses the public `https://photon.komoot.io/api/`. |
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | **Yes (required)** | Supabase project URL (Dashboard → Project Settings → Data API). |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | **Yes (required)** | Publishable key (`sb_publishable_…`). Used on the server for public reads; RLS applies. |
-| `SUPABASE_SECRET_KEY` | **No — server only** | Not yet | Secret key for trusted server operations in later phases. |
+| `SUPABASE_SECRET_KEY` | **No — server only** | **Yes (for submissions)** | Secret (`sb_secret_…`) or legacy `service_role` key. Used only by the server to insert submitted stories as `pending`. Never expose it. |
 | `GEMINI_API_KEY` | **No — server only** | Phase 7+ | Gemini API key. |
 | `GEMINI_MODEL` | No | Phase 7+ | Gemini model identifier. |
 
@@ -165,6 +182,8 @@ src/
 │   ├── page.tsx                      Explore page
 │   ├── destinations/[slug]/page.tsx  Destination page
 │   ├── stories/[id]/page.tsx         Story page
+│   ├── submit/page.tsx               Share-an-experience page
+│   ├── submit/actions.ts             Server Action: validate, rate-limit, submit
 │   ├── api/places/autocomplete/      Place search route (Photon proxy)
 │   ├── layout.tsx                    Root layout, fonts, header/footer
 │   ├── globals.css                   Design tokens + Leaflet styling
@@ -176,7 +195,10 @@ src/
 │   ├── story-card.tsx                Story preview card
 │   ├── before-you-go.tsx             Lessons grouped by topic
 │   ├── story-actions.tsx             Helpful / Report placeholders
-│   ├── share-callout.tsx             "Share an experience" section
+│   ├── share-callout.tsx             "Share your experience" section
+│   ├── submit/story-form.tsx         Submission form (validation, map pin, states)
+│   ├── submit/submit-flow.tsx        Fresh form + one-time key per submission
+│   ├── data-states.tsx               Unavailable / empty / loading states
 │   ├── map/explore-map.tsx           Client-only map loader + error boundary
 │   ├── map/story-map.tsx             Leaflet map (pins, popups, focus, picker)
 │   ├── site-header.tsx · mobile-nav.tsx · site-footer.tsx · wordmark.tsx
@@ -186,6 +208,10 @@ src/
 │   ├── data.ts                       Data-access functions (only DB reader; server-only)
 │   ├── mappers.ts                    Selected columns, row types, row → domain mapping
 │   ├── supabase/server.ts            Server-only Supabase client (publishable key)
+│   ├── supabase/admin.ts             Server-only privileged client (submissions only)
+│   ├── story-submission.ts           Submission schema (zod), shared by form + server
+│   ├── submissions.ts                Trusted submit: destination check, pending insert
+│   ├── rate-limit.ts                 In-memory rate limiter
 │   ├── story-filtering.ts            Pure filter/sort used by the feed
 │   ├── before-you-go.ts              Groups story lessons by topic
 │   ├── map.ts                        Tile config, MapPoint type, story → map point
@@ -274,6 +300,47 @@ Partial indexes cover published stories per destination and globally, newest fir
   so browsers cannot create, publish or modify content.
 - The app never uses a secret/service-role key for these reads.
 
+### How submissions are stored
+
+There are no user accounts yet, so anonymous submissions go through a trusted
+server path instead of a public insert policy:
+
+1. The form posts to a Next.js **Server Action** (`src/app/submit/actions.ts`).
+   Next.js checks the request origin; only known text fields are read.
+2. The payload is validated with the shared zod schema (`src/lib/story-submission.ts`).
+   Unknown fields, such as a forged `status`, are ignored or rejected.
+3. Per-IP rate limit (5 accepted submissions per 10 minutes, in memory) and a
+   hidden honeypot field for bots.
+4. `src/lib/submissions.ts` checks the destination is published (through the
+   public, RLS-enforced client), checks any map pin is within 200 km of it, and
+   catches the same story being sent twice.
+5. The row is inserted with the server-only secret key, always with
+   `status = 'pending'`, `published_at = null`, `is_demo = false` and the form's
+   one-time `submission_key` (unique, so repeats can't create a second story).
+
+Pending stories never appear in feeds, maps or story pages. Database errors are
+logged on the server by code only — never with story text.
+
+### Moderating submissions
+
+Until a moderator UI exists, review submissions in the **SQL Editor** (or Table
+Editor):
+
+```sql
+-- Stories waiting for review
+select id, created_at, title, category, destination_id
+from public.stories where status = 'pending' order by created_at;
+
+-- Publish one (makes it public)
+update public.stories set status = 'published', published_at = now()
+where id = '<story-id>' and status = 'pending';
+
+-- Reject or hide one
+update public.stories set status = 'rejected' where id = '<story-id>';
+```
+
+Publishing means a moderator allowed it on the site — not that it was verified.
+
 ### Set up a Supabase project
 
 Run these in **Supabase Dashboard → SQL Editor** (or `npx supabase db push` if you
@@ -281,8 +348,9 @@ use the Supabase CLI), in order:
 
 1. `supabase/migrations/20261011120000_create_destinations_and_stories.sql`
 2. `supabase/migrations/20261011120100_public_read_rls.sql`
-3. *(optional, development only)* `supabase/seed.sql` — labelled demo content
-4. `supabase/tests/rls_check.sql` — should finish with "All RLS checks passed";
+3. `supabase/migrations/20261011130000_story_submission_key.sql`
+4. *(optional, development only)* `supabase/seed.sql` — labelled demo content
+5. `supabase/tests/rls_check.sql` — should finish with "All RLS checks passed";
    it rolls back everything it creates.
 
 Migrations are additive (no drops or resets). Never run the seed automatically in
@@ -372,7 +440,7 @@ Development follows the phases in [`CLAUDE.md`](CLAUDE.md):
 | 2 | Interactive map (Leaflet + OpenStreetMap) | ✅ Done |
 | 3 | Destination and story UI, search, filters (demo data) | ✅ Done |
 | 4 | Supabase schema, RLS and data access | ✅ Done |
-| 5 | Submit and browse real community stories, reactions, reports | Planned |
+| 5 | Story submission with server-side validation, pending review | ✅ Done (reactions/reports not yet) |
 | 6 | Heatmap, clusters and location filters | Planned |
 | 7 | Gemini moderation (server-side) | Planned |
 | 8 | "Before you go" recommendations grounded in stories | Planned |
@@ -380,8 +448,9 @@ Development follows the phases in [`CLAUDE.md`](CLAUDE.md):
 | 10 | Authentication and account controls | Planned |
 | 11 | Quality, accessibility and launch readiness | Planned |
 
-Known gaps in the current version: no story submission form yet, Helpful/Report
-are placeholders, no pagination (lists are capped at 100–200 stories), not-found
+Known gaps in the current version: no moderator UI (moderation is done in SQL),
+Helpful/Report are still placeholders, the submission form needs JavaScript, rate
+limits and duplicate detection are in memory per server instance, no pagination (lists are capped at 100–200 stories), not-found
 pages for missing destinations/stories return HTTP 200 because they stream after the
 page shell, and some landmark names don't match well in Photon (e.g. "Amer Fort").
 

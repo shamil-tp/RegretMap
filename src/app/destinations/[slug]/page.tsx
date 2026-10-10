@@ -73,7 +73,7 @@ async function DestinationContent({ params }: Pick<Props, "params">) {
       >
         <DestinationStories destination={destination} />
       </Suspense>
-      <ShareCallout destinationName={destination.name} />
+      <ShareCallout destinationName={destination.name} destinationSlug={destination.slug} />
     </>
   );
 }

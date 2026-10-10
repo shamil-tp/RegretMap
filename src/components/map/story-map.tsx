@@ -47,6 +47,8 @@ export type StoryMapProps = {
   points: MapPoint[];
   /** Open the map fitted to the given points instead of the default view. */
   fitToPoints?: boolean;
+  /** Open the map at this centre and zoom (ignored when fitToPoints is set). */
+  initialView?: { center: LatLng; zoom: number };
   /** Point to draw emphasised (e.g. the story selected in a list). */
   highlightedPointId?: string | null;
   /** Pan to a point and open its popup; change `key` to repeat a request. */
@@ -61,6 +63,7 @@ export type StoryMapProps = {
 export default function StoryMap({
   points,
   fitToPoints = false,
+  initialView,
   highlightedPointId,
   focusRequest,
   onPointSelect,
@@ -71,8 +74,11 @@ export default function StoryMap({
   const [initialBounds] = useState(() =>
     fitToPoints
       ? points.map((p): [number, number] => [p.latitude, p.longitude])
-      : [],
+      : initialView
+        ? [[initialView.center.latitude, initialView.center.longitude] as [number, number]]
+        : [],
   );
+  const [initialZoom] = useState(() => (fitToPoints ? undefined : initialView?.zoom));
   const [tileError, setTileError] = useState(false);
   const tileEvents = useMemo(
     () => ({
@@ -84,7 +90,7 @@ export default function StoryMap({
 
   return (
     <div className="relative isolate h-full w-full">
-      <LeafletMapRoot initialBounds={initialBounds}>
+      <LeafletMapRoot initialBounds={initialBounds} singlePointZoom={initialZoom}>
         <TileLayer
           url={tileConfig.url}
           attribution={OSM_ATTRIBUTION}
@@ -165,10 +171,13 @@ export default function StoryMap({
  */
 function LeafletMapRoot({
   initialBounds,
+  singlePointZoom = 12,
   children,
 }: {
   /** Fitted once on creation; empty uses the default view. */
   initialBounds: [number, number][];
+  /** Zoom used when initialBounds has a single point. */
+  singlePointZoom?: number;
   children: React.ReactNode;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -186,7 +195,7 @@ function LeafletMapRoot({
     if (initialBounds.length > 1) {
       map.fitBounds(initialBounds, { padding: [32, 32], maxZoom: 12 });
     } else if (initialBounds.length === 1) {
-      map.setView(initialBounds[0], 12);
+      map.setView(initialBounds[0], singlePointZoom);
     } else {
       map.setView(DEFAULT_CENTER, DEFAULT_ZOOM);
     }
@@ -196,7 +205,7 @@ function LeafletMapRoot({
       setContext(null);
       map.remove();
     };
-  }, [initialBounds]);
+  }, [initialBounds, singlePointZoom]);
 
   return (
     <div

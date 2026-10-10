@@ -1,6 +1,17 @@
+import Link from "next/link";
 import { buttonClasses } from "@/components/ui/button";
 
-export function ShareCallout({ destinationName }: { destinationName?: string }) {
+export function ShareCallout({
+  destinationName,
+  destinationSlug,
+}: {
+  destinationName?: string;
+  destinationSlug?: string;
+}) {
+  const href = destinationSlug
+    ? `/submit?destination=${encodeURIComponent(destinationSlug)}`
+    : "/submit";
+
   return (
     <section
       id="share"
@@ -17,17 +28,12 @@ export function ShareCallout({ destinationName }: { destinationName?: string }) 
           </h2>
           <p className="mt-2 text-ink-muted">
             Had a trip that taught you something? Your story can help the next
-            traveller prepare better. Story submissions open in an upcoming
-            release.
+            traveller prepare better. Stories are reviewed before they&apos;re published.
           </p>
         </div>
-        <button
-          type="button"
-          disabled
-          className={buttonClasses("primary", "self-start md:self-auto")}
-        >
-          Share an experience — coming soon
-        </button>
+        <Link href={href} className={buttonClasses("primary", "self-start md:self-auto")}>
+          Share your experience
+        </Link>
       </div>
     </section>
   );

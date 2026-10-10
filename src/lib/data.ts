@@ -1,4 +1,5 @@
 import "server-only";
+import { connection } from "next/server";
 import { cache } from "react";
 import {
   DESTINATION_COLUMNS,
@@ -49,6 +50,9 @@ async function run<T>(
   operation: string,
   query: () => PromiseLike<{ data: unknown; error: unknown }>,
 ): Promise<T | null> {
+  // Reads always happen at request time, never during (partial) prerendering,
+  // where Next.js aborts in-flight fetches and they'd look like DB failures.
+  await connection();
   let result: { data: unknown; error: unknown };
   try {
     result = await query();
@@ -130,4 +134,18 @@ export const getStoryById = cache(async (id: string): Promise<StoryWithDestinati
       .maybeSingle(),
   );
   return row ? mapStory(row) : null;
+});
+
+/** Published destination by id (used to validate story submissions). */
+export const getDestinationById = cache(async (id: string): Promise<Destination | null> => {
+  if (!isUuid(id)) return null;
+  const row = await run<DestinationRow>("getDestinationById", () =>
+    getSupabase()
+      .from("destinations")
+      .select(DESTINATION_COLUMNS)
+      .eq("id", id)
+      .eq("status", "published")
+      .maybeSingle(),
+  );
+  return row ? mapDestination(row) : null;
 });

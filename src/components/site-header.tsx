@@ -5,7 +5,7 @@ import { Wordmark } from "@/components/wordmark";
 
 const navLinks = [
   { href: "/", label: "Explore" },
-  { href: "/#share", label: "Share an experience" },
+  { href: "/submit", label: "Share an experience" },
 ];
 
 export function SiteHeader() {
@@ -21,7 +21,7 @@ export function SiteHeader() {
               </Link>
             </li>
             <li>
-              <Link href="/#share" className={buttonClasses("primary")}>
+              <Link href="/submit" className={buttonClasses("primary")}>
                 Share an experience
               </Link>
             </li>

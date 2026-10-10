@@ -24,14 +24,25 @@ type ExploreMapProps = Omit<StoryMapProps, "selectedLocation" | "onLocationSelec
   enableLocationPicker?: boolean;
   /** Show the note that pins are demo examples. */
   showDemoNote?: boolean;
+  /** Controlled picker: current location and change handler (optional). */
+  location?: LatLng | null;
+  onLocationChange?: (location: LatLng | null) => void;
+  /** Text shown under the map before a location is picked. */
+  pickerHint?: string;
 };
 
 export function ExploreMap({
   enableLocationPicker = false,
   showDemoNote = false,
+  location,
+  onLocationChange,
+  pickerHint = "Click the map to see a location's coordinates. Nothing is saved here.",
   ...mapProps
 }: ExploreMapProps) {
-  const [selected, setSelected] = useState<LatLng | null>(null);
+  const [internal, setInternal] = useState<LatLng | null>(null);
+  const controlled = onLocationChange !== undefined;
+  const selected = controlled ? (location ?? null) : internal;
+  const setSelected = controlled ? onLocationChange : setInternal;
 
   return (
     <div>
@@ -73,10 +84,7 @@ export function ExploreMap({
               </button>
             </p>
           ) : (
-            <p>
-              Click the map to pick a location. It isn&apos;t saved — it will
-              be used when sharing an experience.
-            </p>
+            <p>{pickerHint}</p>
           )}
         </div>
       )}

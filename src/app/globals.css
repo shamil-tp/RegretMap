@@ -26,9 +26,13 @@ body {
   color: var(--color-ink);
 }
 
-:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
+/* In the base layer so utilities (e.g. focus:outline-none on programmatically
+   focused headings) can override it. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
 }
 
 /*

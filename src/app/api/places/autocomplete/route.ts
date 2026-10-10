@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { clientIp, createRateLimiter } from "@/lib/rate-limit";
 import {
   PLACE_QUERY_MAX,
   PLACE_QUERY_MIN,
@@ -40,17 +41,7 @@ function photonUrl() {
 
 // In-memory rate limit and cache. Per server instance only: good enough for
 // development and a single instance; use a shared store if deployed at scale.
-const RATE_LIMIT = { windowMs: 60_000, max: 30 };
-const requestLog = new Map<string, number[]>();
-
-function isRateLimited(ip: string) {
-  const now = Date.now();
-  const recent = (requestLog.get(ip) ?? []).filter((t) => now - t < RATE_LIMIT.windowMs);
-  recent.push(now);
-  requestLog.set(ip, recent);
-  if (requestLog.size > 5000) requestLog.clear();
-  return recent.length > RATE_LIMIT.max;
-}
+const rateLimiter = createRateLimiter({ windowMs: 60_000, max: 30 });
 
 const CACHE_TTL_MS = 60 * 60 * 1000;
 const cache = new Map<string, { expires: number; suggestions: PlaceSuggestion[] }>();
@@ -100,8 +91,7 @@ export async function GET(request: NextRequest) {
     return json({ suggestions: [], error: "Search text is too long." }, 400);
   }
 
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
-  if (isRateLimited(ip)) {
+  if (rateLimiter.isLimited(clientIp(request.headers))) {
     return json({ suggestions: [], error: "Too many searches." }, 429, { "Retry-After": "60" });
   }
 

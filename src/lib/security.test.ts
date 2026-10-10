@@ -27,6 +27,9 @@ describe("secret handling", () => {
       /GEMINI_API_KEY/,
       /@\/lib\/supabase\/server/,
       /@\/lib\/data["']/,
+      /@\/lib\/submissions/,
+      /@\/lib\/supabase\/admin/,
+      /@\/lib\/rate-limit/,
     ];
     for (const file of clientFiles) {
       for (const pattern of forbidden) {
@@ -41,8 +44,22 @@ describe("secret handling", () => {
     }
   });
 
-  it("the Supabase client module is server-only", () => {
-    const server = files.find((f) => f.path.endsWith(join("supabase", "server.ts")));
-    expect(server?.text).toMatch(/^import "server-only";/m);
+  it("Supabase clients and the submission service are server-only", () => {
+    for (const suffix of [
+      join("supabase", "server.ts"),
+      join("supabase", "admin.ts"),
+      join("lib", "submissions.ts"),
+      join("lib", "data.ts"),
+    ]) {
+      const file = files.find((f) => f.path.endsWith(suffix));
+      expect(file?.text, suffix).toMatch(/^import "server-only";/m);
+    }
+  });
+
+  it("only the submission service uses the privileged client", () => {
+    const users = files
+      .filter((f) => f.text.includes("getSupabaseAdmin") && !f.path.endsWith(join("supabase", "admin.ts")))
+      .map((f) => f.path);
+    expect(users).toEqual([expect.stringMatching(/submissions\.ts$/)]);
   });
 });
