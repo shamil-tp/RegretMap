@@ -10,7 +10,9 @@ import L from "leaflet";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import { HeatLayer } from "@/components/map/heat-layer";
 import { Badge } from "@/components/ui/badge";
+import { showsHeat, showsPins, toHeatPoints, type MapLayers } from "@/lib/heatmap";
 import {
   DEFAULT_CENTER,
   DEFAULT_ZOOM,
@@ -45,6 +47,8 @@ const selectedPinIcon = L.divIcon({
 
 export type StoryMapProps = {
   points: MapPoint[];
+  /** Which story layers to draw (default: pins only). */
+  layers?: MapLayers;
   /** Open the map fitted to the given points instead of the default view. */
   fitToPoints?: boolean;
   /** Open the map at this centre and zoom (ignored when fitToPoints is set). */
@@ -62,6 +66,7 @@ export type StoryMapProps = {
 
 export default function StoryMap({
   points,
+  layers = "pins",
   fitToPoints = false,
   initialView,
   highlightedPointId,
@@ -71,6 +76,7 @@ export default function StoryMap({
   onLocationSelect,
 }: StoryMapProps) {
   const markers = useRef(new Map<string, L.Marker>());
+  const heatPoints = useMemo(() => toHeatPoints(points), [points]);
   const [initialBounds] = useState(() =>
     fitToPoints
       ? points.map((p): [number, number] => [p.latitude, p.longitude])
@@ -101,7 +107,9 @@ export default function StoryMap({
         {onLocationSelect && <ClickToSelect onSelect={onLocationSelect} />}
         <FocusController request={focusRequest} markers={markers} />
 
-        {points.map((point) => (
+        {showsHeat(layers) && <HeatLayer points={heatPoints} />}
+
+        {showsPins(layers) && points.map((point) => (
           <Marker
             key={point.id}
             position={[point.latitude, point.longitude]}

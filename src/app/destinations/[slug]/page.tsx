@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { AiRecommendations, AiRecommendationsSkeleton } from "@/components/ai-recommendations";
 import { BeforeYouGo } from "@/components/before-you-go";
 import {
   ExplorerSkeleton,
@@ -145,6 +146,11 @@ async function DestinationStories({ destination }: { destination: Destination })
           items={buildBeforeYouGo(stories)}
           destinationName={destination.name}
           fromDemo={hasDemo}
+          aiSummary={
+            <Suspense fallback={<AiRecommendationsSkeleton />}>
+              <AiRecommendations destination={destination} stories={stories} />
+            </Suspense>
+          }
         />
       </div>
 

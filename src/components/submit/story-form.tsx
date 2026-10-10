@@ -81,7 +81,33 @@ export function StoryForm({
   const [location, setLocation] = useState<Coordinates | null>(null);
   const [showMap, setShowMap] = useState(false);
   const [clientErrors, setClientErrors] = useState<FieldErrors | null>(null);
+  /** Fields edited since the last submit; their server errors are stale. */
+  const [edited, setEdited] = useState<ReadonlySet<SubmissionField>>(new Set());
   const summaryRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // The form is streamed in before React attaches; adopt anything typed or
+  // ticked in that gap so validation sees what the user sees.
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form) return;
+    const typed: Partial<Values> = {};
+    for (const key of Object.keys(emptyValues()) as (keyof Values)[]) {
+      const element = form.elements.namedItem(key);
+      if (
+        (element instanceof HTMLInputElement ||
+          element instanceof HTMLTextAreaElement ||
+          element instanceof HTMLSelectElement) &&
+        element.value
+      ) {
+        typed[key] = element.value;
+      }
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing pre-hydration DOM input
+    if (Object.keys(typed).length > 0) setValues((current) => ({ ...current, ...typed }));
+    const consentBox = form.elements.namedItem("consent");
+    if (consentBox instanceof HTMLInputElement && consentBox.checked) setConsent(true);
+  }, []);
   const successRef = useRef<HTMLHeadingElement>(null);
 
   const [state, formAction, pending] = useActionState(
@@ -99,8 +125,15 @@ export function StoryForm({
     { status: "idle" },
   );
 
-  const errors: FieldErrors =
-    clientErrors ?? (state.status === "invalid" ? state.fieldErrors : {});
+  const serverErrors: FieldErrors =
+    state.status === "invalid"
+      ? Object.fromEntries(
+          Object.entries(state.fieldErrors).filter(
+            ([field]) => !edited.has(field as SubmissionField),
+          ),
+        )
+      : {};
+  const errors: FieldErrors = clientErrors ?? serverErrors;
   const errorEntries = fieldOrder.filter((field) => errors[field]);
   const destination = destinations.find((d) => d.id === values.destinationId);
 
@@ -109,14 +142,24 @@ export function StoryForm({
     else if (state.status === "invalid" || state.status === "error") summaryRef.current?.focus();
   }, [state]);
 
+  function markEdited(...fields: SubmissionField[]) {
+    setEdited((current) => new Set([...current, ...fields]));
+    if (clientErrors && fields.some((f) => clientErrors[f])) {
+      const next = { ...clientErrors };
+      for (const f of fields) delete next[f];
+      setClientErrors(next);
+    }
+  }
+
   function update(field: keyof Values, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
-    if (clientErrors?.[field]) setClientErrors({ ...clientErrors, [field]: undefined });
+    markEdited(field);
   }
 
   function chooseDestination(id: string) {
     update("destinationId", id);
     setLocation(null);
+    markEdited("latitude");
   }
 
   function validateBeforeSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -128,6 +171,7 @@ export function StoryForm({
       submissionKey,
       website: "",
     });
+    setEdited(new Set());
     if (result.success) {
       setClientErrors(null);
       return;
@@ -164,11 +208,16 @@ export function StoryForm({
     );
   }
 
-  const showSummary =
-    errorEntries.length > 0 || state.status === "error" || state.status === "invalid";
+  const showSummary = errorEntries.length > 0 || (state.status === "error" && !clientErrors);
 
   return (
-    <form action={formAction} onSubmit={validateBeforeSubmit} noValidate className="space-y-10">
+    <form
+      ref={formRef}
+      action={formAction}
+      onSubmit={validateBeforeSubmit}
+      noValidate
+      className="space-y-10"
+    >
       {showSummary && (
         <div
           ref={summaryRef}
@@ -278,7 +327,10 @@ export function StoryForm({
                   }
                   enableLocationPicker
                   location={location}
-                  onLocationChange={setLocation}
+                  onLocationChange={(next) => {
+                    setLocation(next);
+                    markEdited("latitude");
+                  }}
                   pickerHint="Click the map where it happened. Skip this if you only know the destination — never pin a private home."
                 />
               </div>
@@ -395,7 +447,7 @@ export function StoryForm({
             checked={consent}
             onChange={(e) => {
               setConsent(e.target.checked);
-              if (clientErrors?.consent) setClientErrors({ ...clientErrors, consent: undefined });
+              markEdited("consent");
             }}
             aria-invalid={Boolean(errors.consent)}
             aria-describedby="consent-hint"

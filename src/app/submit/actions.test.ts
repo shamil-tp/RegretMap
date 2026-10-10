@@ -9,11 +9,29 @@ let currentIp = "203.0.113.1";
 const submitStory = vi.fn();
 vi.mock("@/lib/submissions", () => ({ submitStory: (input: unknown) => submitStory(input) }));
 
+// Capture work scheduled with after() instead of running it.
+const scheduled: (() => Promise<void>)[] = [];
+vi.mock("next/server", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/server")>()),
+  connection: async () => {},
+  after: (task: () => Promise<void>) => scheduled.push(task),
+}));
+
+const moderateStory = vi.fn();
+const retryPendingModerations = vi.fn();
+vi.mock("@/lib/moderation/service", () => ({
+  moderateStory: (id: string) => moderateStory(id),
+  retryPendingModerations: (n: number) => retryPendingModerations(n),
+}));
+
 const { submitStoryAction } = await import("@/app/submit/actions");
 const idle = { status: "idle" } as const;
 
 let ipCounter = 0;
 beforeEach(() => {
+  scheduled.length = 0;
+  moderateStory.mockReset().mockResolvedValue("completed");
+  retryPendingModerations.mockReset().mockResolvedValue(0);
   currentIp = `203.0.113.${++ipCounter}`;
   submitStory.mockReset().mockResolvedValue({
     ok: true,
@@ -74,11 +92,63 @@ describe("submitStoryAction", () => {
     expect(b.status === "invalid" && b.fieldErrors.latitude).toBeTruthy();
   });
 
+  it("maps a full moderation queue to an honest 'busy' message", async () => {
+    submitStory.mockResolvedValue({ ok: false, reason: "busy" });
+    const state = await submitStoryAction(idle, toFormData(validInput()));
+    expect(state.status === "error" && state.message).toMatch(/Nothing was saved/);
+  });
+
   it("rate-limits repeated submissions from one IP", async () => {
     const states = [];
     for (let i = 0; i < 6; i++) states.push(await submitStoryAction(idle, toFormData(validInput())));
     expect(states.slice(0, 5).every((s) => s.status === "submitted")).toBe(true);
     expect(states[5].status).toBe("error");
     expect(submitStory).toHaveBeenCalledTimes(5);
+  });
+
+  it("caps submissions globally even when every request forges a new IP", async () => {
+    // Fresh module so the per-instance counters start at zero.
+    vi.resetModules();
+    const { submitStoryAction: fresh } = await import("@/app/submit/actions");
+    const states = [];
+    for (let i = 0; i < 31; i++) {
+      currentIp = `10.9.${Math.floor(i / 200)}.${i}`; // forged X-Forwarded-For each time
+      states.push(await fresh(idle, toFormData(validInput())));
+    }
+    expect(states.slice(0, 30).every((s) => s.status === "submitted")).toBe(true);
+    expect(states[30].status).toBe("error");
+  });
+
+  it("schedules AI moderation for a newly stored story, after responding", async () => {
+    submitStory.mockResolvedValue({
+      ok: true,
+      destination: { name: "Manali", slug: "manali" },
+      storyId: "new-story-id",
+    });
+    const state = await submitStoryAction(idle, toFormData(validInput()));
+    expect(state.status).toBe("submitted");
+    expect(moderateStory).not.toHaveBeenCalled(); // not before the response
+    expect(scheduled).toHaveLength(1);
+    await scheduled[0]();
+    expect(moderateStory).toHaveBeenCalledWith("new-story-id");
+    expect(retryPendingModerations).toHaveBeenCalledWith(2);
+  });
+
+  it("does not schedule moderation for a repeated submit (no new story)", async () => {
+    await submitStoryAction(idle, toFormData(validInput()));
+    expect(scheduled).toHaveLength(0);
+  });
+
+  it("keeps the user's result honest even if moderation crashes later", async () => {
+    submitStory.mockResolvedValue({
+      ok: true,
+      destination: { name: "Manali", slug: "manali" },
+      storyId: "new-story-id",
+    });
+    moderateStory.mockRejectedValue(new Error("boom"));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const state = await submitStoryAction(idle, toFormData(validInput()));
+    await expect(scheduled[0]()).resolves.toBeUndefined();
+    expect(state.status).toBe("submitted");
   });
 });

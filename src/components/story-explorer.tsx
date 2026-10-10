@@ -3,15 +3,17 @@
 import { Info, SearchX } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ExploreMap } from "@/components/map/explore-map";
+import { HeatmapLegend, MapLayerToggle } from "@/components/map/map-layer-controls";
 import { StoryCard } from "@/components/story-card";
 import { StoryFilters, useStoryFilters } from "@/components/story-filters";
 import { StateMessage } from "@/components/ui/state-message";
+import { showsHeat, type MapLayers } from "@/lib/heatmap";
 import { storiesToMapPoints } from "@/lib/map";
 import type { StoryWithDestination } from "@/lib/stories";
 
 /**
- * Map + filterable story feed. The same filtered list drives both the map pins
- * and the feed, so they always stay consistent.
+ * Map + filterable story feed. The same filtered list drives the map pins, the
+ * story-density heatmap and the feed, so they always stay consistent.
  */
 export function StoryExplorer({
   stories,
@@ -34,10 +36,14 @@ export function StoryExplorer({
   const [focusRequest, setFocusRequest] = useState<{ id: string; key: number } | null>(
     null,
   );
+  const [layers, setLayers] = useState<MapLayers>("both");
   const points = useMemo(() => storiesToMapPoints(visible), [visible]);
   const hasDemo = stories.some((story) => story.isDemo);
+  const withoutLocation = visible.length - points.length;
 
   function showOnMap(id: string) {
+    // A single story is found by its pin, so make sure pins are visible.
+    if (layers === "heat") setLayers("both");
     setHighlightedId(id);
     setFocusRequest((previous) => ({ id, key: (previous?.key ?? 0) + 1 }));
     document.getElementById("story-map")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -46,12 +52,16 @@ export function StoryExplorer({
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-12">
       <aside aria-labelledby="map-heading" className="lg:sticky lg:top-6 lg:self-start">
-        <h2 id="map-heading" className="text-lg font-semibold text-ink">
-          {mapHeading}
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="map-heading" className="text-lg font-semibold text-ink">
+            {mapHeading}
+          </h2>
+          <MapLayerToggle value={layers} onChange={setLayers} />
+        </div>
         <div className="mt-4">
           <ExploreMap
             points={points}
+            layers={layers}
             fitToPoints={fitMapToStories}
             highlightedPointId={highlightedId}
             focusRequest={focusRequest}
@@ -59,6 +69,24 @@ export function StoryExplorer({
             enableLocationPicker={enableLocationPicker}
             showDemoNote={hasDemo}
           />
+        </div>
+        <div aria-live="polite" className="mt-3 space-y-3">
+          {points.length === 0 ? (
+            <p className="text-sm text-ink-muted">
+              {visible.length === 0
+                ? "No stories match these filters, so the map is empty."
+                : "None of these stories has a map location yet."}
+            </p>
+          ) : (
+            withoutLocation > 0 && (
+              <p className="text-xs text-ink-muted">
+                {withoutLocation === 1
+                  ? "1 story without a map location isn't shown on the map."
+                  : `${withoutLocation} stories without a map location aren't shown on the map.`}
+              </p>
+            )
+          )}
+          {showsHeat(layers) && points.length > 0 && <HeatmapLegend />}
         </div>
         {aside}
       </aside>

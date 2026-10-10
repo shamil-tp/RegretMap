@@ -147,7 +147,7 @@ async function StoryContent({ params }: Pick<Props, "params">) {
           </p>
 
           <div className="mt-6">
-            <StoryActions />
+            <StoryActions isDemo={story.isDemo} />
           </div>
         </article>
 

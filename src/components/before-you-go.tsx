@@ -8,11 +8,14 @@ export function BeforeYouGo({
   items,
   destinationName,
   fromDemo,
+  aiSummary,
 }: {
   items: BeforeYouGoItem[];
   destinationName: string;
   /** True when the source stories include demo content. */
   fromDemo: boolean;
+  /** Optional AI summary shown above the quoted lessons. */
+  aiSummary?: React.ReactNode;
 }) {
   return (
     <section aria-labelledby="before-you-go-heading">
@@ -26,10 +29,17 @@ export function BeforeYouGo({
         {fromDemo && <Badge tone="demo">Derived from demo stories</Badge>}
       </div>
       <p className="mt-2 max-w-2xl text-sm text-ink-muted">
-        Lessons quoted from travellers&apos; stories about {destinationName}, grouped by
-        topic. They are personal experiences, not verified or current advice — check
-        official sources for permits, weather, safety and transport.
+        Practical lessons from travellers&apos; stories about {destinationName}. They are
+        personal experiences, not verified or current advice — check official sources
+        for permits, weather, safety and transport.
       </p>
+
+      {aiSummary}
+      {aiSummary && items.length > 0 && (
+        <h3 className="mt-8 text-sm font-semibold uppercase tracking-wide text-ink-muted">
+          In travellers&apos; own words
+        </h3>
+      )}
 
       {items.length === 0 ? (
         <p className="mt-6 text-sm text-ink-muted">

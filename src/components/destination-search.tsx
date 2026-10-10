@@ -112,6 +112,17 @@ export function DestinationSearch({
     };
   }, [trimmed]);
 
+  // This input is streamed in before React attaches, so text typed in that gap
+  // exists only in the DOM. Adopt it once on mount so it isn't silently ignored.
+  useEffect(() => {
+    const input = inputRef.current;
+    const typed = input?.value ?? "";
+    if (typed) {
+      setQuery(typed);
+      setIsOpen(document.activeElement === input && typed.trim().length > 0);
+    }
+  }, []);
+
   // Close the list when clicking outside.
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {

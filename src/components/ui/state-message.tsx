@@ -6,14 +6,18 @@ export function StateMessage({
   title,
   description,
   tone = "neutral",
+  headingLevel = "h3",
   children,
 }: {
   icon: LucideIcon;
   title: string;
   description?: string;
   tone?: "neutral" | "error";
+  /** Use "h1" when the message is the whole page (not-found, error pages). */
+  headingLevel?: "h1" | "h2" | "h3";
   children?: React.ReactNode;
 }) {
+  const Heading = headingLevel;
   return (
     <div
       role={tone === "error" ? "alert" : undefined}
@@ -23,7 +27,7 @@ export function StateMessage({
         aria-hidden
         className={`size-8 ${tone === "error" ? "text-accent" : "text-ink-muted"}`}
       />
-      <h3 className="mt-3 text-base font-semibold text-ink">{title}</h3>
+      <Heading className="mt-3 text-base font-semibold text-ink">{title}</Heading>
       {description && (
         <p className="mt-1 max-w-sm text-sm text-ink-muted">{description}</p>
       )}

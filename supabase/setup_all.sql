@@ -2,27 +2,25 @@
 -- RegretMap — complete database setup + DEMO data (single file)
 -- =============================================================================
 -- Paste this whole file into Supabase Dashboard -> SQL Editor and click Run.
+-- One transaction: if anything fails, nothing is applied.
 --
--- What it does, in one transaction (if anything fails, nothing is applied):
---   1. Creates tables `destinations` and `stories` with constraints, indexes and
---      an updated_at trigger.
---   2. Enables Row Level Security: the public can only READ published rows;
---      nobody can insert/update/delete through the public API.
---   3. Adds `stories.submission_key` (prevents duplicate story submissions).
---   4. Inserts DEMO data: 5 destinations + 18 stories, all marked is_demo = true.
---      These are illustrative examples, not real community submissions.
+-- Creates the tables, Row Level Security, the submission key, the private AI
+-- moderation table + review queue, the private AI recommendation cache, and
+-- inserts DEMO data (5 destinations and
+-- 18 stories, all is_demo = true — illustrative, not real submissions).
 --
--- Safe to re-run: nothing is dropped except the two read policies (recreated
--- identically), and existing rows are never overwritten or duplicated.
+-- Safe to re-run: nothing is dropped except the read policies (recreated
+-- identically); existing rows are never overwritten or duplicated.
 --
--- Generated from supabase/migrations/*.sql and supabase/seed.sql — edit those
--- files, not this one. After running, optionally run supabase/tests/rls_check.sql.
+-- GENERATED from supabase/migrations/*.sql and supabase/seed.sql — edit those
+-- files, not this one. Afterwards, optionally run supabase/tests/rls_check.sql.
 -- =============================================================================
 
 begin;
 
 -- -----------------------------------------------------------------------------
--- 1. Schema
+-- 1. Schema: destinations and stories
+--    (20261011120000_create_destinations_and_stories.sql)
 -- -----------------------------------------------------------------------------
 
 -- RegretMap Phase 4: destinations and travel stories.
@@ -126,7 +124,8 @@ create or replace trigger stories_set_updated_at
   for each row execute function public.set_updated_at();
 
 -- -----------------------------------------------------------------------------
--- 2. Row Level Security
+-- 2. Row Level Security (public can only read published rows)
+--    (20261011120100_public_read_rls.sql)
 -- -----------------------------------------------------------------------------
 
 -- RegretMap Phase 4: Row Level Security for public read access.
@@ -169,7 +168,8 @@ create policy "Public can read published stories of published destinations"
   );
 
 -- -----------------------------------------------------------------------------
--- 3. Submission key
+-- 3. Submission key (prevents duplicate submissions)
+--    (20261011130000_story_submission_key.sql)
 -- -----------------------------------------------------------------------------
 
 -- RegretMap Phase 5: idempotent story submissions.
@@ -191,7 +191,156 @@ comment on column public.stories.submission_key is
   'One-time key from the submission form, used to ignore duplicate submits.';
 
 -- -----------------------------------------------------------------------------
--- 4. DEMO data (is_demo = true)
+-- 4. AI moderation metadata (private) and review queue
+--    (20261011140000_story_moderation.sql)
+-- -----------------------------------------------------------------------------
+
+-- RegretMap Phase 7: AI-assisted moderation metadata (annotate only).
+--
+-- Additive only. Moderation results live in a separate PRIVATE table, because
+-- the public can read every column of a published story. The AI never changes
+-- a story's status: stories stay 'pending' until a human publishes or rejects
+-- them. This table only labels the review queue.
+
+create table if not exists public.story_moderation (
+  story_id        uuid primary key references public.stories (id) on delete cascade,
+  -- Lifecycle of the automated check.
+  status          text not null default 'queued'
+                  check (status in ('queued', 'completed', 'failed')),
+  -- Model recommendation (validated allowlist; never applied automatically).
+  decision        text check (decision in ('allow_review', 'flag_review', 'reject_recommended')),
+  -- Server-side policy result used to sort the human review queue.
+  queue_label     text not null default 'unmoderated'
+                  check (queue_label in ('clear', 'needs_attention', 'reject_recommended', 'unmoderated')),
+  categories      text[] not null default '{}'
+                  check (categories <@ array[
+                    'spam', 'promotional', 'off_topic', 'harassment', 'threat', 'hate',
+                    'personal_info', 'suspicious_link', 'scam_attempt',
+                    'dangerous_instructions', 'unusable'
+                  ]::text[]),
+  reason_codes    text[] not null default '{}' check (cardinality(reason_codes) <= 6),
+  summary         text check (char_length(summary) <= 300),
+  confidence      real check (confidence between 0 and 1),
+  model           text check (char_length(model) <= 80),
+  attempts        smallint not null default 0 check (attempts between 0 and 20),
+  -- Error class only (e.g. 'timeout', 'quota'), never provider messages or story text.
+  last_error      text check (char_length(last_error) <= 40),
+  moderated_at    timestamptz,
+  -- Filled by trigger when a human changes the story's status.
+  reviewed_status text,
+  reviewed_at     timestamptz,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
+);
+
+comment on table public.story_moderation is
+  'Private AI moderation metadata for the human review queue. Not readable by the public. AI results are recommendations only.';
+
+create index if not exists story_moderation_status_idx on public.story_moderation (status);
+create index if not exists story_moderation_queue_idx on public.story_moderation (queue_label);
+
+create or replace trigger story_moderation_set_updated_at
+  before update on public.story_moderation
+  for each row execute function public.set_updated_at();
+
+-- Private: RLS on, no policies, and no table privileges for public roles.
+alter table public.story_moderation enable row level security;
+revoke all on public.story_moderation from anon, authenticated;
+
+-- Record the human decision when a story's status changes (audit trail kept
+-- separate from the user-submitted story text).
+create or replace function public.record_story_review()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+begin
+  update public.story_moderation
+     set reviewed_status = new.status,
+         reviewed_at = now()
+   where story_id = new.id;
+  return new;
+end;
+$$;
+
+create or replace trigger stories_record_review
+  after update of status on public.stories
+  for each row
+  when (old.status is distinct from new.status)
+  execute function public.record_story_review();
+
+-- Review queue for moderators (SQL Editor). Pending stories, most urgent first.
+create or replace view public.moderation_queue
+with (security_invoker = true) as
+select
+  s.id,
+  s.created_at,
+  d.name as destination,
+  s.title,
+  coalesce(m.queue_label, 'unmoderated') as queue_label,
+  m.decision,
+  m.categories,
+  m.reason_codes,
+  m.summary,
+  m.confidence,
+  m.status as moderation_status,
+  m.attempts
+from public.stories s
+join public.destinations d on d.id = s.destination_id
+left join public.story_moderation m on m.story_id = s.id
+where s.status = 'pending'
+order by
+  case coalesce(m.queue_label, 'unmoderated')
+    when 'reject_recommended' then 0
+    when 'needs_attention' then 1
+    when 'unmoderated' then 2
+    else 3
+  end,
+  s.created_at;
+
+revoke all on public.moderation_queue from anon, authenticated;
+
+-- -----------------------------------------------------------------------------
+-- 5. AI recommendation cache (private)
+--    (20261011150000_destination_recommendations.sql)
+-- -----------------------------------------------------------------------------
+
+-- RegretMap Phase 8: cache for AI "Before you go" recommendations.
+--
+-- Additive only. One row per destination holding the last validated summary.
+-- A row is reused only while its evidence_hash (a hash of the eligible story
+-- set, model and prompt version) still matches and it hasn't expired, so new or
+-- changed published stories automatically trigger a fresh summary.
+-- Private: written and read only by the trusted server.
+
+create table if not exists public.destination_recommendations (
+  destination_id   uuid primary key references public.destinations (id) on delete cascade,
+  evidence_hash    text not null check (char_length(evidence_hash) = 64),
+  model            text not null check (char_length(model) <= 80),
+  prompt_version   text not null check (char_length(prompt_version) <= 20),
+  -- Validated summary; every source id is checked against the story set first.
+  payload          jsonb not null,
+  source_story_ids uuid[] not null default '{}',
+  from_demo        boolean not null default false,
+  generated_at     timestamptz not null default now(),
+  expires_at       timestamptz not null,
+  created_at       timestamptz not null default now(),
+  updated_at       timestamptz not null default now()
+);
+
+comment on table public.destination_recommendations is
+  'Private cache of AI summaries of published stories. AI summaries, not verified facts.';
+
+create or replace trigger destination_recommendations_set_updated_at
+  before update on public.destination_recommendations
+  for each row execute function public.set_updated_at();
+
+alter table public.destination_recommendations enable row level security;
+revoke all on public.destination_recommendations from anon, authenticated;
+
+-- -----------------------------------------------------------------------------
+-- 6. DEMO data (is_demo = true)
 -- -----------------------------------------------------------------------------
 
 -- RegretMap DEVELOPMENT SEED — clearly labelled demo content (is_demo = true).

@@ -69,3 +69,8 @@ html .leaflet-popup-content {
     0 0 0 3px rgb(209 56 61 / 0.3),
     0 1px 3px rgb(0 0 0 / 0.35);
 }
+
+/* Story-density heatmap: translucent so the base map stays readable. */
+html .leaflet-heatmap-layer {
+  opacity: 0.75;
+}

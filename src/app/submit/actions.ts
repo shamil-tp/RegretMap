@@ -1,16 +1,23 @@
 "use server";
 
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { clientIp, createRateLimiter } from "@/lib/rate-limit";
 import {
   parseSubmission,
   type StorySubmission,
   type SubmissionState,
 } from "@/lib/story-submission";
+import { moderateStory, retryPendingModerations } from "@/lib/moderation/service";
 import { submitStory } from "@/lib/submissions";
 
 /** Accepted submissions per IP: 5 per 10 minutes (in memory, per instance). */
 const submitLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 5 });
+/**
+ * IP-independent cap per instance, because client IP headers can be forged.
+ * submissions.ts also enforces a database-backed cap shared by all instances.
+ */
+const globalSubmitLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30 });
 
 const FIELDS = [
   "destinationId",
@@ -62,7 +69,7 @@ export async function submitStoryAction(
     };
   }
 
-  if (submitLimiter.isLimited(clientIp(await headers()))) {
+  if (submitLimiter.isLimited(clientIp(await headers())) || globalSubmitLimiter.isLimited("all")) {
     return {
       status: "error",
       message: "You've shared several stories recently. Please wait a few minutes and try again.",
@@ -71,6 +78,19 @@ export async function submitStoryAction(
 
   const result = await submitStory(parsed.data);
   if (result.ok) {
+    const storyId = result.storyId;
+    if (storyId) {
+      // AI moderation runs after the response is sent, so submitting stays fast.
+      // It only labels the review queue; the story stays 'pending' regardless.
+      after(async () => {
+        try {
+          await moderateStory(storyId);
+          await retryPendingModerations(2);
+        } catch (error) {
+          console.error(`[moderation] unexpected error: ${error instanceof Error ? error.name : "unknown"}`);
+        }
+      });
+    }
     return {
       status: "submitted",
       destinationName: result.destination.name,
@@ -90,6 +110,12 @@ export async function submitStoryAction(
         status: "invalid",
         fieldErrors: { latitude: "The map pin is too far from the destination you chose." },
         message: "Please fix the highlighted fields.",
+      };
+    case "busy":
+      return {
+        status: "error",
+        message:
+          "We're receiving a lot of stories right now. Nothing was saved — please try again later.",
       };
     case "duplicate_content":
       return {

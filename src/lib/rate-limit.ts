@@ -19,7 +19,13 @@ export function createRateLimiter({ windowMs, max }: { windowMs: number; max: nu
   };
 }
 
-/** Best-effort client IP from proxy headers; "local" when unknown. */
+/**
+ * Best-effort client IP from proxy headers; "local" when unknown.
+ *
+ * These headers are only trustworthy when a proxy you control (e.g. Vercel or
+ * your load balancer) overwrites them. Otherwise a client can send any value,
+ * so per-IP limits must always be paired with an IP-independent global limit.
+ */
 export function clientIp(headers: Headers) {
   return headers.get("x-forwarded-for")?.split(",")[0]?.trim() || headers.get("x-real-ip") || "local";
 }

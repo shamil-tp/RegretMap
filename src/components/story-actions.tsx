@@ -4,7 +4,7 @@ import { Flag, ThumbsUp } from "lucide-react";
 import { useState } from "react";
 
 /** Local-only placeholders: nothing here is saved or sent anywhere yet. */
-export function StoryActions() {
+export function StoryActions({ isDemo }: { isDemo: boolean }) {
   const [helpful, setHelpful] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
 
@@ -43,8 +43,10 @@ export function StoryActions() {
       </p>
       {reportOpen && (
         <p id="report-note" className="text-sm text-ink-muted">
-          Reporting opens when community stories go live. This story is a demo
-          example and isn&apos;t a real submission.
+          Reporting isn&apos;t available yet.{" "}
+          {isDemo
+            ? "This story is a demo example and isn't a real submission."
+            : "Stories are reviewed by a moderator before they're published."}
         </p>
       )}
     </div>

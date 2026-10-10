@@ -8,8 +8,9 @@ export default function NotFound() {
     <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
       <StateMessage
         icon={MapPinOff}
+        headingLevel="h1"
         title="We couldn't find that page"
-        description="The destination or story may not exist yet. Stories are currently available only for the demo destinations."
+        description="The destination or story may not exist, or it hasn't been published."
       >
         <Link href="/" className={buttonClasses("secondary")}>
           Back to Explore

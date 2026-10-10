@@ -18,11 +18,27 @@ export const MAX_PIN_DISTANCE_KM = 200;
 /** Identical stories within this window are treated as accidental duplicates. */
 const DUPLICATE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * Shared cap on new pending stories, counted in the database so it holds across
+ * server instances and can't be bypassed with forged IP headers.
+ */
+export const MAX_PENDING_PER_HOUR = 60;
+
 export type SubmitResult =
-  | { ok: true; destination: { name: string; slug: string } }
+  | {
+      ok: true;
+      destination: { name: string; slug: string };
+      /** Set only when a new story row was created (not for a repeated submit). */
+      storyId?: string;
+    }
   | {
       ok: false;
-      reason: "invalid_destination" | "location_too_far" | "duplicate_content" | "unavailable";
+      reason:
+        | "invalid_destination"
+        | "location_too_far"
+        | "duplicate_content"
+        | "busy"
+        | "unavailable";
     };
 
 export function distanceKm(a: Coordinates, b: Coordinates) {
@@ -78,9 +94,13 @@ export async function submitStory(input: StorySubmission): Promise<SubmitResult>
       : { ok: false, reason: "duplicate_content" };
   }
 
+  const busy = await isOverPendingCap(now);
+  if (busy !== false) return { ok: false, reason: busy === "unknown" ? "unavailable" : "busy" };
+
   let error: { code?: string; message?: string } | null;
+  let created: { id: string } | null = null;
   try {
-    ({ error } = await getSupabaseAdmin()
+    ({ data: created, error } = await getSupabaseAdmin()
       .from("stories")
       .insert({
         destination_id: destination.id,
@@ -100,7 +120,9 @@ export async function submitStory(input: StorySubmission): Promise<SubmitResult>
         status: "pending",
         published_at: null,
         is_demo: false,
-      }));
+      })
+      .select("id")
+      .single());
   } catch (thrown) {
     error = { message: thrown instanceof Error ? thrown.message : String(thrown) };
   }
@@ -116,5 +138,26 @@ export async function submitStory(input: StorySubmission): Promise<SubmitResult>
 
   if (recentSubmissions.size > 10_000) recentSubmissions.clear();
   recentSubmissions.set(print, { submissionKey: input.submissionKey, at: now });
-  return accepted;
+  return { ...accepted, storyId: created?.id };
+}
+
+/**
+ * True when too many stories were submitted in the last hour (any source).
+ * Fails closed: if the count can't be read, report "unknown" so nothing is written.
+ */
+async function isOverPendingCap(now: number): Promise<boolean | "unknown"> {
+  try {
+    const { count, error } = await getSupabaseAdmin()
+      .from("stories")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending")
+      .gte("created_at", new Date(now - 60 * 60 * 1000).toISOString());
+    if (error) throw new Error(`${error.code ?? ""} ${error.message ?? ""}`);
+    return (count ?? 0) >= MAX_PENDING_PER_HOUR;
+  } catch (thrown) {
+    console.error(
+      `[submissions] pending-cap check failed: ${thrown instanceof Error ? thrown.message : String(thrown)}`,
+    );
+    return "unknown";
+  }
 }

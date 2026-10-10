@@ -42,6 +42,8 @@ function photonUrl() {
 // In-memory rate limit and cache. Per server instance only: good enough for
 // development and a single instance; use a shared store if deployed at scale.
 const rateLimiter = createRateLimiter({ windowMs: 60_000, max: 30 });
+// IP-independent cap: forged X-Forwarded-For values can't multiply the quota.
+const globalLimiter = createRateLimiter({ windowMs: 60_000, max: 300 });
 
 const CACHE_TTL_MS = 60 * 60 * 1000;
 const cache = new Map<string, { expires: number; suggestions: PlaceSuggestion[] }>();
@@ -91,7 +93,7 @@ export async function GET(request: NextRequest) {
     return json({ suggestions: [], error: "Search text is too long." }, 400);
   }
 
-  if (rateLimiter.isLimited(clientIp(request.headers))) {
+  if (rateLimiter.isLimited(clientIp(request.headers)) || globalLimiter.isLimited("all")) {
     return json({ suggestions: [], error: "Too many searches." }, 429, { "Retry-After": "60" });
   }
 

@@ -9,11 +9,21 @@ vi.mock("@/lib/data", async (importOriginal) => ({
 }));
 
 const insert = vi.fn();
+const pendingCount = vi.fn();
 vi.mock("@/lib/supabase/admin", () => ({
-  getSupabaseAdmin: () => ({ from: (table: string) => ({ insert: (row: unknown) => insert(table, row) }) }),
+  getSupabaseAdmin: () => ({
+    from: (table: string) => ({
+      // insert(row).select("id").single()
+      insert: (row: unknown) => ({ select: () => ({ single: () => insert(table, row) }) }),
+      // Pending-cap query: select(...).eq("status","pending").gte("created_at", ...)
+      select: () => ({ eq: () => ({ gte: () => pendingCount() }) }),
+    }),
+  }),
 }));
 
-const { submitStory, resetSubmissionMemory, distanceKm } = await import("@/lib/submissions");
+const { submitStory, resetSubmissionMemory, distanceKm, MAX_PENDING_PER_HOUR } = await import(
+  "@/lib/submissions"
+);
 const { DataUnavailableError } = await import("@/lib/data");
 
 const manali = {
@@ -33,7 +43,8 @@ function submission(overrides: Record<string, string> = {}): StorySubmission {
 beforeEach(() => {
   resetSubmissionMemory();
   getDestinationById.mockReset().mockResolvedValue(manali);
-  insert.mockReset().mockResolvedValue({ error: null });
+  insert.mockReset().mockResolvedValue({ data: { id: "new-story-id" }, error: null });
+  pendingCount.mockReset().mockResolvedValue({ count: 0, error: null });
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -41,7 +52,11 @@ describe("submitStory", () => {
   it("stores a valid story as pending, non-demo and unpublished", async () => {
     const result = await submitStory(submission({ place: "Bus stand", travelMonth: "5" }));
 
-    expect(result).toEqual({ ok: true, destination: { name: "Manali", slug: "manali" } });
+    expect(result).toEqual({
+      ok: true,
+      destination: { name: "Manali", slug: "manali" },
+      storyId: "new-story-id",
+    });
     expect(insert).toHaveBeenCalledTimes(1);
     const [table, row] = insert.mock.calls[0];
     expect(table).toBe("stories");
@@ -91,16 +106,21 @@ describe("submitStory", () => {
   });
 
   it("treats a repeated submission key as already received (no second write)", async () => {
-    insert.mockResolvedValueOnce({ error: null });
     const input = submission();
-    expect((await submitStory(input)).ok).toBe(true);
-    expect((await submitStory(input)).ok).toBe(true);
+    const first = await submitStory(input);
+    const second = await submitStory(input);
+    expect(first).toMatchObject({ ok: true, storyId: "new-story-id" });
+    // No new row, so no storyId: moderation won't run twice for one story.
+    expect(second).toMatchObject({ ok: true });
+    expect(second).not.toHaveProperty("storyId");
     expect(insert).toHaveBeenCalledTimes(1);
   });
 
   it("treats a unique-key conflict from the database as already received", async () => {
-    insert.mockResolvedValue({ error: { code: "23505", message: "duplicate key" } });
-    expect((await submitStory(submission())).ok).toBe(true);
+    insert.mockResolvedValue({ data: null, error: { code: "23505", message: "duplicate key" } });
+    const result = await submitStory(submission());
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.storyId).toBeFalsy();
   });
 
   it("flags the same story sent again from a new form as a duplicate", async () => {
@@ -119,6 +139,25 @@ describe("submitStory", () => {
     });
     await submitStory(submission());
     expect(log.mock.calls.flat().join(" ")).not.toContain("The bus left");
+  });
+});
+
+describe("shared pending cap", () => {
+  it("refuses new stories once the hourly pending cap is reached (nothing written)", async () => {
+    pendingCount.mockResolvedValue({ count: MAX_PENDING_PER_HOUR, error: null });
+    expect(await submitStory(submission())).toEqual({ ok: false, reason: "busy" });
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the cap can't be checked", async () => {
+    pendingCount.mockResolvedValue({ count: null, error: { code: "57014", message: "timeout" } });
+    expect(await submitStory(submission())).toEqual({ ok: false, reason: "unavailable" });
+    expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("allows stories below the cap", async () => {
+    pendingCount.mockResolvedValue({ count: MAX_PENDING_PER_HOUR - 1, error: null });
+    expect((await submitStory(submission())).ok).toBe(true);
   });
 });
 

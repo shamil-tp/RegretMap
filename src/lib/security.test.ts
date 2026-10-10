@@ -50,16 +50,32 @@ describe("secret handling", () => {
       join("supabase", "admin.ts"),
       join("lib", "submissions.ts"),
       join("lib", "data.ts"),
+      join("moderation", "gemini.ts"),
+      join("ai", "gemini-client.ts"),
+      join("recommendations", "service.ts"),
+      join("moderation", "service.ts"),
     ]) {
       const file = files.find((f) => f.path.endsWith(suffix));
       expect(file?.text, suffix).toMatch(/^import "server-only";/m);
     }
   });
 
-  it("only the submission service uses the privileged client", () => {
+  it("only the submission, moderation and recommendation-cache services use the privileged client", () => {
     const users = files
       .filter((f) => f.text.includes("getSupabaseAdmin") && !f.path.endsWith(join("supabase", "admin.ts")))
-      .map((f) => f.path);
-    expect(users).toEqual([expect.stringMatching(/submissions\.ts$/)]);
+      .map((f) => f.path.replaceAll("\\", "/"))
+      .sort();
+    expect(users).toEqual([
+      expect.stringMatching(/lib\/moderation\/service\.ts$/),
+      expect.stringMatching(/lib\/recommendations\/service\.ts$/),
+      expect.stringMatching(/lib\/submissions\.ts$/),
+    ]);
+  });
+
+  it("only the shared Gemini client reads Gemini API keys", () => {
+    const readers = files
+      .filter((f) => /GEMINI_API_KEY/.test(f.text))
+      .map((f) => f.path.replaceAll("\\", "/"));
+    expect(readers).toEqual([expect.stringMatching(/lib\/ai\/gemini-client\.ts$/)]);
   });
 });

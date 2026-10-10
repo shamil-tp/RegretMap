@@ -69,6 +69,35 @@ begin
   exception when insufficient_privilege then null;
   end;
 
+  -- Phase 7: AI moderation metadata is private (only present after that migration).
+  if to_regclass('public.story_moderation') is not null then
+    begin
+      perform 1 from public.story_moderation limit 1;
+      raise exception 'FAIL: anon can read story_moderation';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+      perform 1 from public.moderation_queue limit 1;
+      raise exception 'FAIL: anon can read moderation_queue';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+      insert into public.story_moderation (story_id, status)
+      values ('00000000-0000-4000-8000-000000000012', 'completed');
+      raise exception 'FAIL: anon can write story_moderation';
+    exception when insufficient_privilege then null;
+    end;
+  end if;
+
+  -- Phase 8: AI recommendation cache is private.
+  if to_regclass('public.destination_recommendations') is not null then
+    begin
+      perform 1 from public.destination_recommendations limit 1;
+      raise exception 'FAIL: anon can read destination_recommendations';
+    exception when insufficient_privilege then null;
+    end;
+  end if;
+
   raise notice 'All RLS checks passed';
 end;
 $$;

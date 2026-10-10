@@ -10,6 +10,7 @@ export default function ErrorPage({ retry }: { retry: () => void }) {
       <StateMessage
         icon={TriangleAlert}
         tone="error"
+        headingLevel="h1"
         title="Something went wrong"
         description="This page couldn't be loaded. Please try again."
       >

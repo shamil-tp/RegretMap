@@ -11,12 +11,14 @@ built from those stories.
 RegretMap is about **destinations, places, journeys, activities and travel
 conditions** — not a hotel, room or restaurant rating site.
 
-> **Current status: development preview (Phase 5 of 11).**
+> **Current status: development preview (Phase 8 of 11).**
 > Destinations and stories are read from Supabase (PostgreSQL) with Row Level
 > Security, and travellers can submit stories, which are saved as **pending review**
 > (not public until a moderator publishes them). The current public content is a
-> **clearly labelled demo seed** written for development. There are no user
-> accounts or AI yet. See the [roadmap](#roadmap).
+> **clearly labelled demo seed** written for development. New submissions get an
+> AI moderation check (Gemini) that only labels the human review queue — it never
+> publishes or rejects anything. There are no user accounts yet. See the
+> [roadmap](#roadmap).
 
 ---
 
@@ -55,10 +57,13 @@ conditions** — not a hotel, room or restaurant rating site.
     combobox semantics; clear button; loading and empty states.
 - **Interactive map** (Leaflet + OpenStreetMap) with a pin for every story.
   Clicking a pin shows a popup with a link to the story.
+- **Story-concentration heatmap** with a **Pins / Heatmap / Both** switch and a
+  legend ("Fewer stories → More stories"). Warmer areas mean more published
+  stories — never more danger. See [Heatmap](#heatmap).
 - **Location picker:** click anywhere on the map to see its coordinates (for the
   future story form; nothing is saved).
 - **Story feed** with category filters, travel-time filter, sorting and reset.
-  The map pins always show the same filtered stories as the feed.
+  The map pins and heatmap always show the same filtered stories as the feed.
 - **"Show on map"** on each story highlights its pin and opens its popup.
 - List of destinations with their demo story counts.
 
@@ -66,10 +71,15 @@ conditions** — not a hotel, room or restaurant rating site.
 
 - Destination name, region, country, short description, number of stories and the
   months travellers visited.
-- **Before you go:** travellers' own lessons grouped by topic (transport, planning,
-  packing…). Every lesson is quoted from a story and links to it, with an honest
-  evidence label ("One traveller reported this" / "Based on N stories") and a
-  season label when all supporting stories share one. No text is generated.
+- **Before you go:**
+  - An **AI summary** (Gemini) of the destination's published stories: a short
+    overview and 3–5 practical tips, each linked to the stories it's based on, with
+    "One traveller reported this" / "Based on N stories" labels. Clearly marked as an
+    AI summary of personal experiences, not verified facts. See
+    [AI "Before you go" summaries](#ai-before-you-go-summaries).
+  - **In travellers' own words:** lessons quoted directly from stories, grouped by
+    topic, with evidence and season labels. Always shown, so the page stays useful
+    if the AI summary is unavailable.
 - Map fitted to the destination's story locations, plus the filterable story feed.
 
 ### Story page (`/stories/[id]`)
@@ -116,7 +126,8 @@ conditions** — not a hotel, room or restaurant rating site.
 | Testing | [Vitest](https://vitest.dev) (unit tests with a mocked Supabase client) |
 | Linting | ESLint 9 with `eslint-config-next` |
 | CI/CD | GitHub Actions (CI checks + tag-based GitHub Releases) |
-| Planned | Supabase Auth, Gemini API (server-side only) |
+| AI | Gemini (`GEMINI_MODEL`, currently `gemini-3.1-flash-lite`) via the REST API, server-side only, with a rotating key pool — moderation labels and "Before you go" summaries |
+| Planned | Supabase Auth |
 
 ## Getting started
 
@@ -157,8 +168,9 @@ phases.
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | **Yes (required)** | Supabase project URL (Dashboard → Project Settings → Data API). |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | **Yes (required)** | Publishable key (`sb_publishable_…`). Used on the server for public reads; RLS applies. |
 | `SUPABASE_SECRET_KEY` | **No — server only** | **Yes (for submissions)** | Secret (`sb_secret_…`) or legacy `service_role` key. Used only by the server to insert submitted stories as `pending`. Never expose it. |
-| `GEMINI_API_KEY` | **No — server only** | Phase 7+ | Gemini API key. |
-| `GEMINI_MODEL` | No | Phase 7+ | Gemini model identifier. |
+| `GEMINI_API_KEY` | **No — server only** | Yes (AI) | Primary Gemini API key ([Google AI Studio](https://aistudio.google.com/apikey)). Without it, stories are still saved ("unmoderated") and pages show quoted lessons instead of an AI summary. |
+| `GEMINI_API_KEY2`, `GEMINI_API_KEY3`, … | **No — server only** | Optional | Extra keys for rotation (`GEMINI_API_KEY_2` style also works). Empty ones are ignored. |
+| `GEMINI_MODEL` | No | Yes (AI) | Gemini model id, e.g. `gemini-3.1-flash-lite`. |
 
 Rules: never put secret keys in `NEXT_PUBLIC_*` variables, client components, logs
 or committed files.
@@ -201,6 +213,8 @@ src/
 │   ├── data-states.tsx               Unavailable / empty / loading states
 │   ├── map/explore-map.tsx           Client-only map loader + error boundary
 │   ├── map/story-map.tsx             Leaflet map (pins, popups, focus, picker)
+│   ├── map/heat-layer.tsx            Story-density heat layer (leaflet.heat)
+│   ├── map/map-layer-controls.tsx    Pins / Heatmap / Both switch + legend
 │   ├── site-header.tsx · mobile-nav.tsx · site-footer.tsx · wordmark.tsx
 │   └── ui/                           Button styles, Badge, StateMessage
 ├── lib/
@@ -212,9 +226,16 @@ src/
 │   ├── story-submission.ts           Submission schema (zod), shared by form + server
 │   ├── submissions.ts                Trusted submit: destination check, pending insert
 │   ├── rate-limit.ts                 In-memory rate limiter
+│   ├── moderation/policy.ts          Moderation policy, output schema, local signals
+│   ├── moderation/gemini.ts          Server-only Gemini call (REST, JSON output)
+│   ├── moderation/service.ts         Runs moderation, saves results, retries
+│   ├── ai/gemini-client.ts           The one Gemini client: key pool, rotation, errors
+│   ├── recommendations/evidence.ts   Evidence selection, prompt payload, output validation
+│   ├── recommendations/service.ts    Summaries + caching (memory and private table)
 │   ├── story-filtering.ts            Pure filter/sort used by the feed
 │   ├── before-you-go.ts              Groups story lessons by topic
 │   ├── map.ts                        Tile config, MapPoint type, story → map point
+│   ├── heatmap.ts                    Heat points, weights and heatmap settings
 │   ├── place-search.ts               Place-search types and client helper
 │   └── *.test.ts                     Unit tests
 └── test/                             Test fixtures and stubs
@@ -262,13 +283,41 @@ safety, costs, local customs, other.
 - The map receives only the fields it needs (`MapPoint`: id, coordinates, title,
   place, category, demo flag, link) — never full story bodies.
 
+### Heatmap
+
+The heatmap answers one question: **where have more RegretMap stories been
+shared?** It does not show danger, quality, popularity or risk, and the legend
+says so.
+
+- **Data:** exactly the stories the page already shows — published stories of
+  published destinations (query filter + RLS), after the active category and
+  travel-time filters. No extra database request, no pending or hidden stories.
+- **Coordinates:** a story's own `latitude`/`longitude` only. Stories without a
+  location (or with invalid values) are left off the map but stay in the feed;
+  the map notes how many aren't shown. There is no fallback to the destination's
+  coordinates, so no location is invented.
+- **Weighting:** every story counts once with the same weight (1). There is no
+  severity, sentiment or AI weighting.
+- **Scope:** the Explore map uses all published stories; a destination page uses
+  only that destination's stories; story pages show the single pin only.
+- **Settings** (`src/lib/heatmap.ts`): radius 26 px, blur 20 px, two overlapping
+  stories reach the strongest colour, warm peach→coral palette at 75% opacity so
+  the base map stays readable. `maxZoom` is set to the map's minimum zoom so the
+  plugin doesn't fade points when zoomed out.
+- **Library:** [`leaflet.heat`](https://github.com/Leaflet/Leaflet.heat) 0.2.0,
+  loaded in the browser only. It's a small, stable classic plugin that attaches to
+  the global `L`, which `heat-layer.tsx` sets up before loading it.
+- Heat reflects where people chose to write, so busy tourist areas naturally show
+  more — a known bias of any submission-based map.
+
 ### Place search
 
 `GET /api/places/autocomplete?q=…` (server route) calls Photon and returns
 simplified suggestions. It:
 
 - Accepts 2–100 characters (shorter returns nothing, longer returns `400`).
-- Rate-limits each IP to 30 requests per minute (`429` with `Retry-After`).
+- Rate-limits each IP to 30 requests per minute, plus 300 per minute in total per
+  server instance (`429` with `Retry-After`).
 - Caches results for an hour and times out after 4 seconds.
 - Returns only destination-like features (places, natural features, historic sites,
   mountain passes, attractions, viewpoints, museums, national parks, waterfalls) —
@@ -277,6 +326,11 @@ simplified suggestions. It:
 
 The rate limit and cache are in memory per server instance — fine for development
 and a single instance; a shared store is needed for a scaled deployment.
+
+> **Client IPs can be forged.** Per-IP limits read `X-Forwarded-For`, which is only
+> trustworthy behind a proxy you control that overwrites it (e.g. Vercel or your
+> load balancer). That's why every per-IP limit is paired with an IP-independent
+> total limit.
 
 ## Database (Supabase)
 
@@ -309,11 +363,14 @@ server path instead of a public insert policy:
    Next.js checks the request origin; only known text fields are read.
 2. The payload is validated with the shared zod schema (`src/lib/story-submission.ts`).
    Unknown fields, such as a forged `status`, are ignored or rejected.
-3. Per-IP rate limit (5 accepted submissions per 10 minutes, in memory) and a
-   hidden honeypot field for bots.
+3. Rate limits: 5 accepted submissions per IP per 10 minutes and 30 in total per
+   server instance (both in memory), plus a hidden honeypot field for bots.
 4. `src/lib/submissions.ts` checks the destination is published (through the
    public, RLS-enforced client), checks any map pin is within 200 km of it, and
-   catches the same story being sent twice.
+   catches the same story being sent twice. It also counts pending stories created
+   in the last hour **in the database** and refuses new ones above 60 — a shared
+   cap that works across server instances and can't be bypassed with forged IP
+   headers. If that count can't be read, nothing is written (fails closed).
 5. The row is inserted with the server-only secret key, always with
    `status = 'pending'`, `published_at = null`, `is_demo = false` and the form's
    one-time `submission_key` (unique, so repeats can't create a second story).
@@ -321,15 +378,94 @@ server path instead of a public insert policy:
 Pending stories never appear in feeds, maps or story pages. Database errors are
 logged on the server by code only — never with story text.
 
+### Gemini key pool and rotation
+
+All AI calls go through one server-only client (`src/lib/ai/gemini-client.ts`):
+
+- Keys: `GEMINI_API_KEY` (primary), then `GEMINI_API_KEY2`, `GEMINI_API_KEY3`, …
+  in number order. Empty values and duplicates are ignored.
+- The primary key is tried first, and **each key at most once per request** (max 3
+  attempts).
+- **429 rate limit** → that key rests for the provider's `Retry-After` /
+  `retryDelay` (default 60 s, between 5 s and 10 min), and the next key is tried.
+- **Temporary 5xx** → the key rests 15 s, next key.
+- **Invalid or forbidden key** (401/403, `API_KEY_INVALID`) → the key rests 10 min,
+  next key.
+- **Malformed request, timeout or network error** → stop; another key wouldn't help.
+- If every key is resting, the request fails immediately without calling Gemini.
+- Rotation does **not** bypass a quota shared by keys from the same Google Cloud
+  project, and it doesn't guarantee availability. Rest periods are kept in memory
+  per server instance (not shared between instances).
+- Keys are sent only in a request header — never in URLs, logs, errors or responses.
+
+### AI "Before you go" summaries
+
+On a destination page, the server summarises that destination's **published**
+stories (from the RLS-enforced data layer — the browser can't supply evidence):
+
+1. **Evidence:** real stories are preferred; demo stories are used only if there
+   are fewer than 2 real ones, and the summary is then labelled "Generated from demo
+   example stories". At most 12 stories, newest first, with long fields trimmed.
+   Fewer than 2 stories → an honest "not enough stories yet" note (no AI call).
+2. **Prompt:** stories are sent as delimited data with short references (`S1`, `S2`…);
+   the model is told to use only them, cite refs for every tip, never invent facts
+   or numbers, flag disagreements, never rate the destination, and ignore any
+   instructions inside stories.
+3. **Validation:** the JSON answer is checked against a strict schema (1–5 tips,
+   allowed categories, length limits, no links). Every ref must be one the server
+   sent for this destination — **one fabricated citation rejects the whole answer**.
+   Evidence counts are computed by the server, not the model.
+4. **Caching:** results are keyed by a hash of the evidence set + model + prompt
+   version, kept in memory and in the private `destination_recommendations` table
+   for 7 days. New or changed published stories produce a new hash, so a fresh
+   summary is generated; cached rows are re-checked against the current eligible
+   stories before use. Concurrent page views share one generation; after a failure
+   the destination waits 5 minutes before trying again.
+5. **Fallback:** if Gemini is unavailable or the answer is invalid, the page shows
+   the quoted lessons with a short note — nothing is invented.
+
+The summary streams in separately, so the rest of the page never waits for it.
+
+### AI-assisted moderation (annotate only)
+
+After a new story is saved as `pending`, the server asks Gemini to classify it
+**after the response has been sent** (Next.js `after()`), so submitting stays
+fast. The AI result is stored in the private `story_moderation` table and only
+**labels the review queue** — it never changes `stories.status`. A human always
+publishes or rejects. Passing moderation does not mean a story is true.
+
+| Model decision | Meaning |
+|---|---|
+| `allow_review` | Ordinary travel story. Negative experiences, complaints, scam reports and strong language about a bad trip are normal. |
+| `flag_review` | Personal info, harassment, accusations against a named private person, links/promotion, harmful instructions, or unsure. |
+| `reject_recommended` | Clear spam/advertising, off-topic, abusive/threatening, or unusable text — a **recommendation** only. |
+
+Categories (allowlist): spam, promotional, off_topic, harassment, threat, hate,
+personal_info, suspicious_link, scam_attempt, dangerous_instructions, unusable.
+
+**Server policy → queue label:** `reject_recommended` → `reject_recommended`;
+`flag_review`, any category, confidence below 0.6, or a local signal →
+`needs_attention`; a confident `allow_review` → `clear`; failed → `unmoderated`.
+A deterministic local check (emails, phone numbers, links) adds `personal_info` /
+`suspicious_link` regardless of the model.
+
+**Safety:** one small request per story (temperature 0, minimal thinking, 300
+output tokens, 8 s timeout, JSON-schema output). The story is sent as delimited
+data and the model is told to ignore instructions inside it. The reply is treated
+as untrusted and validated against the allowlists — anything else counts as a
+failure. Timeouts, quota (429), provider errors and invalid output are stored as
+`failed` with an error class only (never story text or provider messages) and
+retried later (at most 3 attempts, at least 2 minutes apart, on later
+submissions). Retries update the same row, so they can't duplicate a story.
+
 ### Moderating submissions
 
 Until a moderator UI exists, review submissions in the **SQL Editor** (or Table
 Editor):
 
 ```sql
--- Stories waiting for review
-select id, created_at, title, category, destination_id
-from public.stories where status = 'pending' order by created_at;
+-- Review queue: pending stories with AI labels, most urgent first
+select * from public.moderation_queue;
 
 -- Publish one (makes it public)
 update public.stories set status = 'published', published_at = now()
@@ -340,6 +476,9 @@ update public.stories set status = 'rejected' where id = '<story-id>';
 ```
 
 Publishing means a moderator allowed it on the site — not that it was verified.
+When a story's status changes, `story_moderation.reviewed_status` and
+`reviewed_at` are recorded automatically. `story_moderation` and
+`moderation_queue` are not accessible to the public API.
 
 ### Set up a Supabase project
 
@@ -354,8 +493,10 @@ use the Supabase CLI), in order:
 1. `supabase/migrations/20261011120000_create_destinations_and_stories.sql`
 2. `supabase/migrations/20261011120100_public_read_rls.sql`
 3. `supabase/migrations/20261011130000_story_submission_key.sql`
-4. *(optional, development only)* `supabase/seed.sql` — labelled demo content
-5. `supabase/tests/rls_check.sql` — should finish with "All RLS checks passed";
+4. `supabase/migrations/20261011140000_story_moderation.sql`
+5. `supabase/migrations/20261011150000_destination_recommendations.sql`
+6. *(optional, development only)* `supabase/seed.sql` — labelled demo content
+7. `supabase/tests/rls_check.sql` — should finish with "All RLS checks passed";
    it rolls back everything it creates.
 
 Migrations are additive (no drops or resets). Never run the seed automatically in
@@ -446,16 +587,17 @@ Development follows the phases in [`CLAUDE.md`](CLAUDE.md):
 | 3 | Destination and story UI, search, filters (demo data) | ✅ Done |
 | 4 | Supabase schema, RLS and data access | ✅ Done |
 | 5 | Story submission with server-side validation, pending review | ✅ Done (reactions/reports not yet) |
-| 6 | Heatmap, clusters and location filters | Planned |
-| 7 | Gemini moderation (server-side) | Planned |
-| 8 | "Before you go" recommendations grounded in stories | Planned |
+| 6 | Story-concentration heatmap, pins/heatmap switch, filter-aware | ✅ Done (no clustering yet) |
+| 7 | AI-assisted moderation (Gemini, annotate only) | ✅ Done |
+| 8 | AI "Before you go" summaries with source links, caching and key rotation | ✅ Done |
 | 9 | Destination-specific AI chat | Planned |
 | 10 | Authentication and account controls | Planned |
 | 11 | Quality, accessibility and launch readiness | Planned |
 
 Known gaps in the current version: no moderator UI (moderation is done in SQL),
-Helpful/Report are still placeholders, the submission form needs JavaScript, rate
-limits and duplicate detection are in memory per server instance, no pagination (lists are capped at 100–200 stories), not-found
+Helpful/Report are still placeholders, the submission form needs JavaScript, per-IP
+rate limits and duplicate-content detection are in memory per server instance (the
+database-backed hourly cap is shared), no pagination (lists are capped at 100–200 stories), not-found
 pages for missing destinations/stories return HTTP 200 because they stream after the
 page shell, and some landmark names don't match well in Photon (e.g. "Amer Fort").
 
