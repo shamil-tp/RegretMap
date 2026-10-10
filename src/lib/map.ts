@@ -1,4 +1,4 @@
-import type { StoryCategory } from "@/lib/stories";
+import type { Coordinates, StoryCategory, StoryWithDestination } from "@/lib/stories";
 
 /**
  * Standard OpenStreetMap tile service. No API key is required, but usage must
@@ -47,6 +47,30 @@ export type MapPoint = {
   place: string;
   category: StoryCategory;
   isDemo: boolean;
+  /** Link to the full story, shown in the popup. */
+  href?: string;
 };
 
-export type LatLng = { latitude: number; longitude: number };
+export type LatLng = Coordinates;
+
+/** Converts stories with coordinates into the minimal points the map needs. */
+export function storiesToMapPoints(stories: StoryWithDestination[]): MapPoint[] {
+  return stories.flatMap((story) =>
+    story.coordinates
+      ? [
+          {
+            id: story.id,
+            latitude: story.coordinates.latitude,
+            longitude: story.coordinates.longitude,
+            title: story.title,
+            place: story.place
+              ? `${story.place}, ${story.destination.name}`
+              : `${story.destination.name}, ${story.destination.region}`,
+            category: story.category,
+            isDemo: story.isDemo,
+            href: `/stories/${story.id}`,
+          },
+        ]
+      : [],
+  );
+}

@@ -3,8 +3,9 @@
 import { Map as MapIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Component, useState } from "react";
+import type { StoryMapProps } from "@/components/map/story-map";
 import { StateMessage } from "@/components/ui/state-message";
-import type { LatLng, MapPoint } from "@/lib/map";
+import type { LatLng } from "@/lib/map";
 
 // Leaflet needs `window`, so the map is only ever loaded in the browser.
 const StoryMap = dynamic(() => import("@/components/map/story-map"), {
@@ -18,17 +19,25 @@ const StoryMap = dynamic(() => import("@/components/map/story-map"), {
   ),
 });
 
-export function ExploreMap({ points }: { points: MapPoint[] }) {
+type ExploreMapProps = Omit<StoryMapProps, "selectedLocation" | "onLocationSelect"> & {
+  /** Let users click the map to pick a location (for the future story form). */
+  enableLocationPicker?: boolean;
+};
+
+export function ExploreMap({ enableLocationPicker = false, ...mapProps }: ExploreMapProps) {
   const [selected, setSelected] = useState<LatLng | null>(null);
 
   return (
     <div>
-      <div className="h-72 overflow-hidden rounded-lg border border-line bg-surface sm:h-96">
+      <div
+        id="story-map"
+        className="h-72 scroll-mt-6 overflow-hidden rounded-lg border border-line bg-surface sm:h-96"
+      >
         <MapErrorBoundary>
           <StoryMap
-            points={points}
-            selectedLocation={selected}
-            onLocationSelect={setSelected}
+            {...mapProps}
+            selectedLocation={enableLocationPicker ? selected : null}
+            onLocationSelect={enableLocationPicker ? setSelected : undefined}
           />
         </MapErrorBoundary>
       </div>
@@ -37,30 +46,32 @@ export function ExploreMap({ points }: { points: MapPoint[] }) {
         Pins mark demo example locations, not real community submissions.
       </p>
 
-      <div aria-live="polite" className="mt-3 text-sm text-ink-muted">
-        {selected ? (
-          <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span>
-              Selected location:{" "}
-              <span className="font-mono text-ink">
-                {selected.latitude.toFixed(5)}, {selected.longitude.toFixed(5)}
+      {enableLocationPicker && (
+        <div aria-live="polite" className="mt-3 text-sm text-ink-muted">
+          {selected ? (
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span>
+                Selected location:{" "}
+                <span className="font-mono text-ink">
+                  {selected.latitude.toFixed(5)}, {selected.longitude.toFixed(5)}
+                </span>
               </span>
-            </span>
-            <button
-              type="button"
-              onClick={() => setSelected(null)}
-              className="rounded text-accent underline-offset-2 hover:underline"
-            >
-              Clear
-            </button>
-          </p>
-        ) : (
-          <p>
-            Click the map to pick a location. It isn&apos;t saved — it will
-            be used when sharing an experience.
-          </p>
-        )}
-      </div>
+              <button
+                type="button"
+                onClick={() => setSelected(null)}
+                className="rounded text-accent underline-offset-2 hover:underline"
+              >
+                Clear
+              </button>
+            </p>
+          ) : (
+            <p>
+              Click the map to pick a location. It isn&apos;t saved — it will
+              be used when sharing an experience.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

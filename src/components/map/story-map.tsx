@@ -7,6 +7,7 @@ import {
   type LeafletContextInterface,
 } from "@react-leaflet/core";
 import L from "leaflet";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +30,13 @@ const storyPinIcon = L.divIcon({
   popupAnchor: [0, -10],
 });
 
+const highlightedPinIcon = L.divIcon({
+  className: "map-pin map-pin--highlighted",
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+  popupAnchor: [0, -13],
+});
+
 const selectedPinIcon = L.divIcon({
   className: "map-pin map-pin--selected",
   iconSize: [18, 18],
@@ -37,6 +45,14 @@ const selectedPinIcon = L.divIcon({
 
 export type StoryMapProps = {
   points: MapPoint[];
+  /** Open the map fitted to the given points instead of the default view. */
+  fitToPoints?: boolean;
+  /** Point to draw emphasised (e.g. the story selected in a list). */
+  highlightedPointId?: string | null;
+  /** Pan to a point and open its popup; change `key` to repeat a request. */
+  focusRequest?: { id: string; key: number } | null;
+  /** Called when a story pin is clicked. */
+  onPointSelect?: (id: string) => void;
   selectedLocation?: LatLng | null;
   /** When provided, clicking the map reports the clicked coordinates. */
   onLocationSelect?: (location: LatLng) => void;
@@ -44,9 +60,19 @@ export type StoryMapProps = {
 
 export default function StoryMap({
   points,
+  fitToPoints = false,
+  highlightedPointId,
+  focusRequest,
+  onPointSelect,
   selectedLocation,
   onLocationSelect,
 }: StoryMapProps) {
+  const markers = useRef(new Map<string, L.Marker>());
+  const [initialBounds] = useState(() =>
+    fitToPoints
+      ? points.map((p): [number, number] => [p.latitude, p.longitude])
+      : [],
+  );
   const [tileError, setTileError] = useState(false);
   const tileEvents = useMemo(
     () => ({
@@ -58,7 +84,7 @@ export default function StoryMap({
 
   return (
     <div className="relative isolate h-full w-full">
-      <LeafletMapRoot>
+      <LeafletMapRoot initialBounds={initialBounds}>
         <TileLayer
           url={tileConfig.url}
           attribution={OSM_ATTRIBUTION}
@@ -67,14 +93,21 @@ export default function StoryMap({
         />
         <ResizeHandler />
         {onLocationSelect && <ClickToSelect onSelect={onLocationSelect} />}
+        <FocusController request={focusRequest} markers={markers} />
 
         {points.map((point) => (
           <Marker
             key={point.id}
             position={[point.latitude, point.longitude]}
-            icon={storyPinIcon}
+            icon={point.id === highlightedPointId ? highlightedPinIcon : storyPinIcon}
+            zIndexOffset={point.id === highlightedPointId ? 1000 : 0}
             title={point.title}
             alt={`Story location: ${point.title}`}
+            eventHandlers={{ click: () => onPointSelect?.(point.id) }}
+            ref={(marker) => {
+              if (marker) markers.current.set(point.id, marker);
+              else markers.current.delete(point.id);
+            }}
           >
             <Popup>
               <div className="flex flex-col gap-1.5 font-sans">
@@ -86,6 +119,14 @@ export default function StoryMap({
                   {point.title}
                 </div>
                 <div className="text-xs text-ink-muted">{point.place}</div>
+                {point.href && (
+                  <Link
+                    href={point.href}
+                    className="mt-1 text-sm font-medium text-accent hover:underline"
+                  >
+                    Read story
+                  </Link>
+                )}
               </div>
             </Popup>
           </Marker>
@@ -122,7 +163,14 @@ export default function StoryMap({
  * map instance. (react-leaflet's MapContainer creates the map in a ref callback
  * but removes it in an effect cleanup, which leaves a dead map after a re-run.)
  */
-function LeafletMapRoot({ children }: { children: React.ReactNode }) {
+function LeafletMapRoot({
+  initialBounds,
+  children,
+}: {
+  /** Fitted once on creation; empty uses the default view. */
+  initialBounds: [number, number][];
+  children: React.ReactNode;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [context, setContext] = useState<LeafletContextInterface | null>(null);
 
@@ -131,19 +179,24 @@ function LeafletMapRoot({ children }: { children: React.ReactNode }) {
     if (!node) return;
 
     const map = L.map(node, {
-      center: DEFAULT_CENTER,
-      zoom: DEFAULT_ZOOM,
       minZoom: MIN_ZOOM,
       maxZoom: MAX_ZOOM,
       worldCopyJump: true,
     });
+    if (initialBounds.length > 1) {
+      map.fitBounds(initialBounds, { padding: [32, 32], maxZoom: 12 });
+    } else if (initialBounds.length === 1) {
+      map.setView(initialBounds[0], 12);
+    } else {
+      map.setView(DEFAULT_CENTER, DEFAULT_ZOOM);
+    }
     setContext(createLeafletContext(map));
 
     return () => {
       setContext(null);
       map.remove();
     };
-  }, []);
+  }, [initialBounds]);
 
   return (
     <div
@@ -181,5 +234,25 @@ function ClickToSelect({
       onSelect({ latitude: lat, longitude: lng });
     },
   });
+  return null;
+}
+
+function FocusController({
+  request,
+  markers,
+}: {
+  request: StoryMapProps["focusRequest"];
+  markers: React.RefObject<Map<string, L.Marker>>;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!request) return;
+    const marker = markers.current.get(request.id);
+    if (!marker) return;
+    map.flyTo(marker.getLatLng(), Math.max(map.getZoom(), 12), { duration: 0.6 });
+    map.once("moveend", () => marker.openPopup());
+  }, [map, markers, request]);
+
   return null;
 }

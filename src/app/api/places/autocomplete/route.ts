@@ -1,117 +1,148 @@
-import { NextResponse } from "next/server";
-import type { PlaceSuggestion } from "@/lib/geoapify";
+import { type NextRequest, NextResponse } from "next/server";
+import {
+  PLACE_QUERY_MAX,
+  PLACE_QUERY_MIN,
+  type PlaceSearchResponse,
+  type PlaceSuggestion,
+} from "@/lib/place-search";
 
-interface GeoapifyRawResult {
-  place_id?: string;
-  name?: string;
-  formatted?: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  lat?: number;
-  lon?: number;
-  result_type?: string;
-  category?: string;
-  address_line1?: string;
-  address_line2?: string;
+/*
+ * Place autocomplete proxied to Photon (https://photon.komoot.io), an
+ * OpenStreetMap-based geocoder built for search-as-you-type. No API key is
+ * needed. The public instance is fair-use only ("extensive usage will be
+ * throttled", no availability guarantee), so this route caps input length,
+ * rate-limits per IP and caches results. Set PHOTON_API_URL to use a
+ * self-hosted instance.
+ */
+
+const DEFAULT_PHOTON_URL = "https://photon.komoot.io/api/";
+const RESULT_LIMIT = 6;
+const TIMEOUT_MS = 4000;
+
+/** Destination-like features only — no hotels, restaurants or addresses. */
+const OSM_TAGS = [
+  "place",
+  "natural",
+  "historic",
+  "mountain_pass",
+  "tourism:attraction",
+  "tourism:viewpoint",
+  "tourism:museum",
+  "boundary:national_park",
+  "leisure:nature_reserve",
+  "waterway:waterfall",
+];
+
+function photonUrl() {
+  const configured = process.env.PHOTON_API_URL?.trim();
+  return configured?.startsWith("https://") ? configured : DEFAULT_PHOTON_URL;
 }
 
-interface GeoapifyRawFeature {
-  properties?: GeoapifyRawResult;
-  geometry?: {
-    coordinates?: [number, number];
+// In-memory rate limit and cache. Per server instance only: good enough for
+// development and a single instance; use a shared store if deployed at scale.
+const RATE_LIMIT = { windowMs: 60_000, max: 30 };
+const requestLog = new Map<string, number[]>();
+
+function isRateLimited(ip: string) {
+  const now = Date.now();
+  const recent = (requestLog.get(ip) ?? []).filter((t) => now - t < RATE_LIMIT.windowMs);
+  recent.push(now);
+  requestLog.set(ip, recent);
+  if (requestLog.size > 5000) requestLog.clear();
+  return recent.length > RATE_LIMIT.max;
+}
+
+const CACHE_TTL_MS = 60 * 60 * 1000;
+const cache = new Map<string, { expires: number; suggestions: PlaceSuggestion[] }>();
+
+type PhotonFeature = {
+  geometry?: { coordinates?: [number, number] };
+  properties?: {
+    osm_type?: string;
+    osm_id?: number;
+    osm_key?: string;
+    osm_value?: string;
+    name?: string;
+    city?: string;
+    county?: string;
+    state?: string;
+    country?: string;
+  };
+};
+
+function toSuggestion(feature: PhotonFeature): PlaceSuggestion | null {
+  const p = feature.properties;
+  const [longitude, latitude] = feature.geometry?.coordinates ?? [];
+  if (!p?.name || typeof latitude !== "number" || typeof longitude !== "number") {
+    return null;
+  }
+  const region = p.state ?? p.county ?? p.city;
+  return {
+    id: `${p.osm_type ?? "x"}${p.osm_id ?? `${latitude},${longitude}`}`,
+    name: p.name,
+    context: [region !== p.name ? region : undefined, p.country].filter(Boolean).join(", "),
+    // Some features are tagged like mountain_pass=yes; use the key then.
+    kind: (p.osm_value && p.osm_value !== "yes" ? p.osm_value : (p.osm_key ?? "place")).replaceAll("_", " "),
+    latitude,
+    longitude,
   };
 }
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const text = searchParams.get("text") || searchParams.get("q") || "";
+function json(body: PlaceSearchResponse, status = 200, headers?: HeadersInit) {
+  return NextResponse.json(body, { status, headers });
+}
 
-  if (!text || text.trim().length < 2) {
-    return NextResponse.json({ suggestions: [] });
+export async function GET(request: NextRequest) {
+  const q = request.nextUrl.searchParams.get("q")?.trim() ?? "";
+
+  if (q.length < PLACE_QUERY_MIN) return json({ suggestions: [] });
+  if (q.length > PLACE_QUERY_MAX) {
+    return json({ suggestions: [], error: "Search text is too long." }, 400);
   }
 
-  const apiKey =
-    process.env.GEOAPIFY_API_KEY || process.env.NEXT_PUBLIC_GEOAPIFY_API_KEY;
-
-  if (!apiKey) {
-    return NextResponse.json(
-      {
-        suggestions: [],
-        missingKey: true,
-        error: "GEOAPIFY_API_KEY is not configured in .env.local",
-      },
-      { status: 200 },
-    );
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+  if (isRateLimited(ip)) {
+    return json({ suggestions: [], error: "Too many searches." }, 429, { "Retry-After": "60" });
   }
+
+  const key = q.toLowerCase();
+  const cached = cache.get(key);
+  if (cached && cached.expires > Date.now()) {
+    return json({ suggestions: cached.suggestions });
+  }
+
+  const url = new URL(photonUrl());
+  url.searchParams.set("q", q);
+  url.searchParams.set("limit", String(RESULT_LIMIT));
+  url.searchParams.set("lang", "en");
+  for (const tag of OSM_TAGS) url.searchParams.append("osm_tag", tag);
 
   try {
-    const geoapifyUrl = new URL("https://api.geoapify.com/v1/geocode/autocomplete");
-    geoapifyUrl.searchParams.set("text", text.trim());
-    geoapifyUrl.searchParams.set("limit", "7");
-    geoapifyUrl.searchParams.set("format", "json");
-    geoapifyUrl.searchParams.set("apiKey", apiKey);
-
-    const res = await fetch(geoapifyUrl.toString(), {
-      headers: { Accept: "application/json" },
-      // Cache identical queries for 1 hour to respect rate limits
-      next: { revalidate: 3600 },
+    const res = await fetch(url, {
+      headers: { Accept: "application/json", "User-Agent": "RegretMap/0.1 (place autocomplete)" },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      cache: "no-store",
     });
+    if (!res.ok) throw new Error(`Photon responded with ${res.status}`);
 
-    if (!res.ok) {
-      const errorText = await res.text().catch(() => "");
-      return NextResponse.json(
-        {
-          suggestions: [],
-          error: `Geoapify responded with ${res.status}: ${errorText || res.statusText}`,
-        },
-        { status: 200 },
-      );
-    }
-
-    const data = await res.json();
-    const rawList: GeoapifyRawResult[] = Array.isArray(data?.results)
-      ? data.results
-      : Array.isArray(data?.features)
-        ? data.features.map((f: GeoapifyRawFeature) => ({
-            ...f.properties,
-            lon: f.geometry?.coordinates?.[0] ?? f.properties?.lon,
-            lat: f.geometry?.coordinates?.[1] ?? f.properties?.lat,
-          }))
-        : [];
-
-    const suggestions: PlaceSuggestion[] = rawList
-      .filter((item) => typeof item.lat === "number" && typeof item.lon === "number")
-      .map((item, index) => {
-        const placeName =
-          item.name ||
-          item.city ||
-          item.address_line1 ||
-          item.formatted?.split(",")[0] ||
-          "Unknown place";
-
-        return {
-          id: item.place_id || `${item.lat},${item.lon}-${index}`,
-          name: placeName,
-          formatted:
-            item.formatted ||
-            [placeName, item.state, item.country].filter(Boolean).join(", "),
-          city: item.city,
-          state: item.state,
-          country: item.country,
-          lat: item.lat as number,
-          lon: item.lon as number,
-          resultType: item.result_type,
-          category: item.category,
-        };
+    const data = (await res.json()) as { features?: PhotonFeature[] };
+    const seen = new Set<string>();
+    const suggestions = (data.features ?? [])
+      .map(toSuggestion)
+      .filter((s): s is PlaceSuggestion => {
+        if (!s) return false;
+        const dedupeKey = `${s.name}|${s.context}`;
+        if (seen.has(dedupeKey)) return false;
+        seen.add(dedupeKey);
+        return true;
       });
 
-    return NextResponse.json({ suggestions });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Failed to fetch suggestions";
-    return NextResponse.json(
-      { suggestions: [], error: message },
-      { status: 200 },
-    );
+    if (cache.size > 500) cache.clear();
+    cache.set(key, { expires: Date.now() + CACHE_TTL_MS, suggestions });
+    return json({ suggestions });
+  } catch (error) {
+    // Log server-side only; never forward provider details to the browser.
+    console.error("Place search failed:", error instanceof Error ? error.message : error);
+    return json({ suggestions: [], error: "Place search is unavailable right now." }, 503);
   }
 }

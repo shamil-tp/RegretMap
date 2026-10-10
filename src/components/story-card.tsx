@@ -1,31 +1,50 @@
-import { MapPin, ThumbsUp } from "lucide-react";
+import { ArrowRight, MapPin, Navigation } from "lucide-react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import {
-  formatTravelMonth,
+  formatPublishedDate,
+  formatTravelDate,
   storyCategories,
-  type StoryPreview,
+  type StoryWithDestination,
 } from "@/lib/stories";
 
-export function StoryCard({ story }: { story: StoryPreview }) {
+export function StoryCard({
+  story,
+  highlighted = false,
+  onShowOnMap,
+}: {
+  story: StoryWithDestination;
+  highlighted?: boolean;
+  /** When provided and the story has coordinates, shows a "Show on map" action. */
+  onShowOnMap?: () => void;
+}) {
+  const travelDate = formatTravelDate(story);
+
   return (
-    <article className="py-6">
+    <article
+      id={`story-${story.id}`}
+      className={`scroll-mt-24 py-6 transition-colors ${
+        highlighted ? "-mx-3 rounded-lg bg-accent-soft/60 px-3" : ""
+      }`}
+    >
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone="accent">{storyCategories[story.category]}</Badge>
-        {story.travelMonth && (
-          <Badge>Travelled in {formatTravelMonth(story.travelMonth)}</Badge>
-        )}
+        {travelDate && <Badge>Travelled {travelDate}</Badge>}
         {story.isDemo && <Badge tone="demo">Demo example</Badge>}
       </div>
 
       <h3 className="mt-3 text-lg font-semibold leading-snug text-ink">
-        {story.title}
+        <Link href={`/stories/${story.id}`} className="rounded hover:text-accent-hover">
+          {story.title}
+        </Link>
       </h3>
       <p className="mt-1 inline-flex items-center gap-1 text-sm text-ink-muted">
-        <MapPin aria-hidden className="size-3.5" />
-        {story.destination}, {story.region}
+        <MapPin aria-hidden className="size-3.5 shrink-0" />
+        {story.place ? `${story.place}, ` : ""}
+        {story.destination.name}, {story.destination.region}
       </p>
 
-      <p className="mt-3 text-[0.95rem] leading-relaxed text-ink">
+      <p className="mt-3 line-clamp-3 text-[0.95rem] leading-relaxed text-ink">
         {story.body}
       </p>
 
@@ -34,22 +53,33 @@ export function StoryCard({ story }: { story: StoryPreview }) {
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
             What I&apos;d do differently
           </p>
-          <p className="mt-1 text-[0.95rem] leading-relaxed text-ink">
-            {story.lesson}
-          </p>
+          <p className="mt-1 text-[0.95rem] leading-relaxed text-ink">{story.lesson}</p>
         </div>
       )}
 
-      <div className="mt-4">
-        <button
-          type="button"
-          disabled
-          title="Reactions open when community stories go live"
-          className="inline-flex items-center gap-1.5 rounded-md border border-line px-3 py-1.5 text-sm text-ink-muted disabled:cursor-not-allowed disabled:opacity-60"
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+        <Link
+          href={`/stories/${story.id}`}
+          className="inline-flex items-center gap-1 rounded font-medium text-accent hover:underline"
         >
-          <ThumbsUp aria-hidden className="size-4" />
-          Helpful
-        </button>
+          Read full story
+          <ArrowRight aria-hidden className="size-4" />
+          <span className="sr-only">: {story.title}</span>
+        </Link>
+        {onShowOnMap && story.coordinates && (
+          <button
+            type="button"
+            onClick={onShowOnMap}
+            className="inline-flex items-center gap-1 rounded text-ink-muted hover:text-ink"
+          >
+            <Navigation aria-hidden className="size-3.5" />
+            Show on map
+          </button>
+        )}
+        <span className="text-ink-muted sm:ml-auto">
+          {story.isDemo ? "Sample date" : "Published"}{" "}
+          {formatPublishedDate(story.publishedAt)}
+        </span>
       </div>
     </article>
   );

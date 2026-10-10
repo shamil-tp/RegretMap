@@ -58,3 +58,10 @@ html .leaflet-popup-content {
 .map-pin--selected {
   background: var(--color-ink);
 }
+
+.map-pin--highlighted {
+  border-width: 3px;
+  box-shadow:
+    0 0 0 3px rgb(209 56 61 / 0.3),
+    0 1px 3px rgb(0 0 0 / 0.35);
+}
