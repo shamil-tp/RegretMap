@@ -18,20 +18,6 @@ export const storyCategories = {
 
 export type StoryCategory = keyof typeof storyCategories;
 
-/** Emoji shown on map pins and category chips (the text label always accompanies it). */
-export const categoryEmoji: Record<StoryCategory, string> = {
-  transport: "🚌",
-  planning: "🗓️",
-  weather: "🌧️",
-  packing: "🎒",
-  activity: "🥾",
-  accessibility: "♿",
-  safety: "⚠️",
-  costs: "💸",
-  local_customs: "🙏",
-  other: "📍",
-};
-
 export type Coordinates = { latitude: number; longitude: number };
 
 /**

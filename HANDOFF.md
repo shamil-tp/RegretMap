@@ -107,6 +107,18 @@ say "saved but isn't public yet"; now stories go live immediately.
   map fits the country, destinations aside filtered; long destination list rendered compactly.
 - Gemini: every configured key (up to 8) is tried per request; `GEMINI_API_KEY4` documented.
 
+## 2f. Layout fixes, more places (2026-10-12)
+
+- Country filter clipping: wrapper had no min-w-0/width inside a flex row, so it took the native
+  select's longest-option width and overflowed; native arrow crowded text. Fixed in
+  `country-filter.tsx` (shrinkable select, reserved arrow padding, custom chevron) and the home row
+  (stacks on mobile). Also: chat textarea min-w-0, break-words on titles/bubbles, narrower comment
+  indentation on phones.
+- Map pins are plain dots again (no emoji). Never put `transform` on `.map-pin` (Leaflet uses it).
+- World seed now 128 notes / 75 destinations / 52 countries (`seed/world/more-places.mjs`);
+  re-run `supabase/seed_world_editorial.sql` (idempotent) to add the new ones.
+- Gemini: up to 10 keys tried per request; GEMINI_API_KEY5+ picked up automatically.
+
 ## 3. Owner must still do (remote, manual)
 
 1. **Apply the Phase 10 migration.** It is NOT on Supabase yet; checked 2026-10-11:

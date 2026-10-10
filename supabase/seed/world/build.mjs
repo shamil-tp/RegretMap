@@ -13,20 +13,21 @@ import { fileURLToPath } from "node:url";
 import { regions as india } from "../india/build.mjs";
 import americasAfricaOceania from "./americas-africa-oceania.mjs";
 import europeAsia from "./europe-asia.mjs";
+import morePlaces from "./more-places.mjs";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const SEED_PATH = `${ROOT}seed_world_editorial.sql`;
 const CHECK_PATH = `${ROOT}tests/world_seed_check.sql`;
 
 /** @type {import("./types.mjs").Country[]} */
-export const countries = [...europeAsia, ...americasAfricaOceania];
+export const countries = [...europeAsia, ...americasAfricaOceania, ...morePlaces];
 
 export const CONTINENTS = {
-  Europe: ["France", "Italy", "Spain", "Netherlands", "United Kingdom", "Greece", "Switzerland", "Iceland", "Czechia", "Portugal", "Croatia", "Norway"],
-  Asia: ["Türkiye", "Japan", "Thailand", "Indonesia", "Vietnam", "Cambodia", "Nepal", "South Korea", "Singapore", "Maldives", "Sri Lanka", "United Arab Emirates", "Jordan", "China"],
-  Africa: ["Morocco", "Egypt", "South Africa", "Tanzania", "Zimbabwe"],
+  Europe: ["France", "Italy", "Spain", "Netherlands", "United Kingdom", "Greece", "Switzerland", "Iceland", "Czechia", "Portugal", "Croatia", "Norway", "Germany", "Austria", "Hungary"],
+  Asia: ["Türkiye", "Japan", "Thailand", "Indonesia", "Vietnam", "Cambodia", "Nepal", "South Korea", "Singapore", "Maldives", "Sri Lanka", "United Arab Emirates", "Jordan", "China", "Malaysia", "Laos", "Philippines", "Hong Kong"],
+  Africa: ["Morocco", "Egypt", "South Africa", "Tanzania", "Zimbabwe", "Kenya", "Namibia"],
   "North America": ["United States", "Canada", "Mexico", "Costa Rica"],
-  "South America": ["Peru", "Brazil", "Argentina", "Chile", "Ecuador"],
+  "South America": ["Peru", "Brazil", "Argentina", "Chile", "Ecuador", "Colombia"],
   Oceania: ["Australia", "New Zealand"],
 };
 
@@ -64,7 +65,8 @@ const BOUNDS = {
   "South Africa": [-34.9, -22.1, 16.4, 32.9],
   Tanzania: [-11.8, -0.9, 29.3, 40.5],
   Zimbabwe: [-22.5, -15.6, 25.2, 33.1],
-  "United States": [24.5, 49.4, -125, -66.9],
+  // Contiguous US plus Hawaii.
+  "United States": [18.9, 49.4, -160.3, -66.9],
   Canada: [41.7, 83.2, -141, -52.6],
   Mexico: [14.5, 32.7, -118.4, -86.7],
   "Costa Rica": [8, 11.3, -86, -82.5],
@@ -74,6 +76,16 @@ const BOUNDS = {
   Chile: [-56, -17.5, -75.7, -66.4],
   Ecuador: [-5, 1.5, -92, -75.2],
   Australia: [-43.7, -10.6, 113.3, 153.7],
+  Germany: [47.2, 55.1, 5.8, 15.1],
+  Austria: [46.3, 49.1, 9.5, 17.2],
+  Hungary: [45.7, 48.6, 16.1, 22.9],
+  Malaysia: [0.8, 7.4, 99.6, 119.3],
+  Laos: [13.9, 22.5, 100.1, 107.7],
+  Philippines: [4.5, 21.2, 116.9, 126.7],
+  "Hong Kong": [22.1, 22.6, 113.8, 114.5],
+  Colombia: [-4.3, 13.4, -79.1, -66.8],
+  Kenya: [-4.7, 5.1, 33.9, 41.9],
+  Namibia: [-29, -16.9, 11.7, 25.3],
   "New Zealand": [-47.3, -34.4, 166.4, 178.6],
 };
 

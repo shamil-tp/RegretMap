@@ -101,9 +101,42 @@ declare
     '7a96a9d1-ecf8-5282-b37d-b67c1d0614c4',
     '310db8ae-f6d3-5444-8827-af9fa84a7371',
     '33900981-1476-55dd-8f6f-1389dce820f7',
-    'de29dbc4-f5a6-50a6-b71d-f4974f2feb66'
+    'de29dbc4-f5a6-50a6-b71d-f4974f2feb66',
+    'd544e92d-c4dc-5aee-9b64-2000bd24ed39',
+    '9bb915d8-ce91-5455-9713-9319f3314a32',
+    'c1a7f6be-d6a4-5c60-93e0-598a31f2c804',
+    'cac741ca-76ed-53bf-9bb4-d3f98ae0cc7e',
+    '3c4f0c31-c74e-58a1-987e-1713078b8514',
+    'c4b1d68f-38a0-5260-86be-7536cc3d7e61',
+    'a36eeaee-6d72-5ed0-a340-7db7c2295d39',
+    '62021d26-99f8-57a6-b4e3-58c197b03b93',
+    '225db280-a06b-50ca-9f3a-5b6a2d30e8c1',
+    'cdcee114-de96-598f-b23b-b8337d437ef6',
+    'b0a80c14-8230-5d67-bfff-11b8b3a640d1',
+    'fa62cfbe-cff2-5910-9d0b-468f88f7cc40',
+    '457d4fa9-0e94-5a79-a21d-3242521138e3',
+    'e13fa335-e85d-5eca-9ff8-fa63b2e93588',
+    'ed892d1a-b2f6-5e01-acd0-d62959059247',
+    '82ed1884-de6c-5bbe-92d6-bb8aa1d8a68a',
+    '91fb59bd-b798-520b-9ee0-03ce9f54bdd5',
+    'aae73790-859b-5f0e-80d3-d05abe739144',
+    'de0e7992-6372-5254-96fe-121a5a225394',
+    'b605d022-96fe-5864-abe1-e2d67aea2c29',
+    '92398854-89ca-5ccc-b305-ccac4a1600eb',
+    '75a1fe83-1d4e-52e5-b63f-5bb37d716f6f',
+    '65220550-4a6e-58cc-af4f-ba1ac5311274',
+    'b56d40bd-5baa-5398-a1e3-df6c3bb73ccd',
+    'a65f6bf1-96f5-5a5b-8996-22292aad9dbd',
+    '63a2ab53-fe1b-5b26-ad56-c983f77f13e9',
+    'e97ad37a-4ff5-5eb9-9bca-de633a462757',
+    '98e73a42-2a5b-59ed-838e-0ec65efa6fa3',
+    'b447d2a2-1a60-5b54-8e9b-df7292da0191',
+    '0a10ca4c-2829-5f25-aeb9-cacc9d11f871',
+    '0f4a811b-8ec4-57d0-a073-15155d0806ea',
+    '78eadfa3-30d8-526f-a74c-2bf1aee1f717',
+    '01ddb3c7-64cd-5e20-bb54-802a36ea706c'
   ]::uuid[];
-  expected int := 95;
+  expected int := 128;
   found int;
   wrong_source int;
   missing text;
@@ -121,7 +154,7 @@ begin
   end if;
 
   select string_agg(c, ', ') into missing
-  from unnest(array['France', 'Italy', 'Spain', 'Netherlands', 'United Kingdom', 'Greece', 'Switzerland', 'Iceland', 'Czechia', 'Portugal', 'Türkiye', 'Croatia', 'Norway', 'Japan', 'Thailand', 'Indonesia', 'Vietnam', 'Cambodia', 'Nepal', 'South Korea', 'Singapore', 'Maldives', 'Sri Lanka', 'United Arab Emirates', 'Jordan', 'China', 'United States', 'Canada', 'Mexico', 'Peru', 'Brazil', 'Argentina', 'Chile', 'Ecuador', 'Costa Rica', 'Morocco', 'Egypt', 'South Africa', 'Tanzania', 'Zimbabwe', 'Australia', 'New Zealand']) as c
+  from unnest(array['France', 'Italy', 'Spain', 'Netherlands', 'United Kingdom', 'Greece', 'Switzerland', 'Iceland', 'Czechia', 'Portugal', 'Türkiye', 'Croatia', 'Norway', 'Japan', 'Thailand', 'Indonesia', 'Vietnam', 'Cambodia', 'Nepal', 'South Korea', 'Singapore', 'Maldives', 'Sri Lanka', 'United Arab Emirates', 'Jordan', 'China', 'United States', 'Canada', 'Mexico', 'Peru', 'Brazil', 'Argentina', 'Chile', 'Ecuador', 'Costa Rica', 'Morocco', 'Egypt', 'South Africa', 'Tanzania', 'Zimbabwe', 'Australia', 'New Zealand', 'Germany', 'Austria', 'Hungary', 'Malaysia', 'Laos', 'Philippines', 'Hong Kong', 'Colombia', 'Kenya', 'Namibia']) as c
   where not exists (
     select 1 from public.stories s
     join public.destinations d on d.id = s.destination_id
@@ -141,6 +174,6 @@ select d.country,
        count(s.id) filter (where s.source = 'editorial') as editorial_notes
 from public.destinations d
 left join public.stories s on s.destination_id = d.id and s.status = 'published'
-where d.slug in ('paris', 'rome', 'venice', 'barcelona', 'amsterdam', 'london', 'edinburgh', 'santorini', 'zermatt', 'reykjavik', 'vik', 'prague', 'lisbon', 'istanbul', 'dubrovnik', 'tromso', 'kyoto', 'tokyo', 'bangkok', 'chiang-mai', 'ubud', 'hanoi', 'ha-long-bay', 'siem-reap', 'kathmandu', 'lukla', 'seoul', 'singapore', 'maafushi', 'ella', 'dubai', 'petra', 'beijing', 'new-york-city', 'grand-canyon-south-rim', 'yosemite-valley', 'banff', 'mexico-city', 'cusco', 'machu-picchu', 'rio-de-janeiro', 'el-chalten', 'torres-del-paine', 'galapagos', 'monteverde', 'marrakech', 'cairo', 'cape-town', 'serengeti', 'stone-town', 'victoria-falls', 'sydney', 'cairns', 'uluru', 'queenstown')
+where d.slug in ('paris', 'rome', 'venice', 'barcelona', 'amsterdam', 'london', 'edinburgh', 'santorini', 'zermatt', 'reykjavik', 'vik', 'prague', 'lisbon', 'istanbul', 'dubrovnik', 'tromso', 'kyoto', 'tokyo', 'bangkok', 'chiang-mai', 'ubud', 'hanoi', 'ha-long-bay', 'siem-reap', 'kathmandu', 'lukla', 'seoul', 'singapore', 'maafushi', 'ella', 'dubai', 'petra', 'beijing', 'new-york-city', 'grand-canyon-south-rim', 'yosemite-valley', 'banff', 'mexico-city', 'cusco', 'machu-picchu', 'rio-de-janeiro', 'el-chalten', 'torres-del-paine', 'galapagos', 'monteverde', 'marrakech', 'cairo', 'cape-town', 'serengeti', 'stone-town', 'victoria-falls', 'sydney', 'cairns', 'uluru', 'queenstown', 'berlin', 'vienna', 'budapest', 'athens', 'florence', 'positano', 'nara', 'phuket', 'kuala-lumpur', 'luang-prabang', 'el-nido', 'hong-kong', 'honolulu', 'tulum', 'cartagena', 'buenos-aires', 'vancouver', 'melbourne', 'maasai-mara', 'sossusvlei')
 group by d.country
 order by d.country;

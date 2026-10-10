@@ -23,26 +23,21 @@ import {
   type LatLng,
   type MapPoint,
 } from "@/lib/map";
-import { categoryEmoji, storyCategories, type StoryCategory } from "@/lib/stories";
+import { storyCategories } from "@/lib/stories";
 
-/** Emoji pins by category, cached so hundreds of markers share a few icons. */
-const pinIcons = new Map<string, L.DivIcon>();
-function storyPinIcon(category: StoryCategory, highlighted: boolean) {
-  const key = `${category}:${highlighted}`;
-  let icon = pinIcons.get(key);
-  if (!icon) {
-    const size = highlighted ? 38 : 30;
-    icon = L.divIcon({
-      className: `map-pin map-pin--emoji${highlighted ? " map-pin--highlighted" : ""}`,
-      html: `<span aria-hidden="true">${categoryEmoji[category]}</span>`,
-      iconSize: [size, size],
-      iconAnchor: [size / 2, size / 2],
-      popupAnchor: [0, -size / 2 - 2],
-    });
-    pinIcons.set(key, icon);
-  }
-  return icon;
-}
+const storyPinIcon = L.divIcon({
+  className: "map-pin",
+  iconSize: [18, 18],
+  iconAnchor: [9, 9],
+  popupAnchor: [0, -10],
+});
+
+const highlightedPinIcon = L.divIcon({
+  className: "map-pin map-pin--highlighted",
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
+  popupAnchor: [0, -13],
+});
 
 const selectedPinIcon = L.divIcon({
   className: "map-pin map-pin--selected",
@@ -118,7 +113,7 @@ export default function StoryMap({
           <Marker
             key={point.id}
             position={[point.latitude, point.longitude]}
-            icon={storyPinIcon(point.category, point.id === highlightedPointId)}
+            icon={point.id === highlightedPointId ? highlightedPinIcon : storyPinIcon}
             zIndexOffset={point.id === highlightedPointId ? 1000 : 0}
             title={point.title}
             alt={`Story location: ${point.title}`}

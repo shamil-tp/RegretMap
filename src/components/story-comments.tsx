@@ -144,12 +144,12 @@ function ThreadItem({
             type="button"
             onClick={() => setCollapsed(true)}
             aria-label={`Collapse thread from ${name}`}
-            className="group ml-2 flex w-4 shrink-0 justify-center pt-1 sm:ml-3 sm:w-5"
+            className="group ml-1 flex w-3 shrink-0 justify-center pt-1 sm:ml-3 sm:w-5"
           >
             <span className="block h-full w-0.5 rounded-full bg-strawberry group-hover:bg-coral" />
           </button>
 
-          <div className="min-w-0 flex-1 pl-1 sm:pl-2">
+          <div className="min-w-0 flex-1 pl-0.5 sm:pl-2">
             {replying &&
               (signedIn ? (
                 <CommentForm
@@ -233,7 +233,7 @@ function CommentCard({
 
   return (
     <article
-      className={`rounded-lg border border-line px-4 py-3 shadow-sm ${
+      className={`animate-fade-up rounded-lg border border-line px-4 py-3 shadow-sm ${
         comment.depth === 0 ? "bg-card" : "bg-canvas"
       }`}
       aria-busy={pending}

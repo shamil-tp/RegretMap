@@ -157,14 +157,14 @@ export function DestinationChat({ slug, destinationName }: { slug: string; desti
 
         {messages.map((message) =>
           message.role === "user" ? (
-            <div key={message.id} className="flex justify-end">
-              <p className="max-w-[85%] rounded-lg rounded-br-sm bg-lavender px-3.5 py-2 text-sm text-ink">
+            <div key={message.id} className="flex animate-fade-up justify-end">
+              <p className="max-w-[85%] break-words rounded-lg rounded-br-sm bg-lavender px-3.5 py-2 text-sm text-ink">
                 <span className="sr-only">You: </span>
                 {message.text}
               </p>
             </div>
           ) : message.role === "assistant" ? (
-            <div key={message.id} className="max-w-[92%]">
+            <div key={message.id} className="max-w-[92%] animate-fade-up break-words">
               <div className="rounded-lg rounded-bl-sm border border-line bg-canvas px-3.5 py-3 text-[0.95rem] leading-relaxed text-ink">
                 <span className="sr-only">RegretMap: </span>
                 <p className="whitespace-pre-line">{message.text}</p>
@@ -255,7 +255,7 @@ export function DestinationChat({ slug, destinationName }: { slug: string; desti
             rows={1}
             maxLength={CHAT_LIMITS.questionMax}
             placeholder={`Ask about travelling in ${destinationName}…`}
-            className="max-h-32 min-h-10 flex-1 resize-y rounded-md border border-line bg-canvas px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-ink-muted"
+            className="max-h-32 min-h-10 min-w-0 flex-1 resize-y rounded-md border border-line bg-card px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
           />
           <button
             type="submit"

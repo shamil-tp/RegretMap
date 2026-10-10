@@ -32,12 +32,10 @@ export default function ExplorePage({ searchParams }: PageProps<"/">) {
     <>
       <section className="border-b border-line bg-strawberry/30">
         <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
-          <p className="flex flex-wrap gap-2 text-sm font-medium text-ink">
-            <span className="rounded-full bg-card px-3 py-1 shadow-sm">✈️ Real trips</span>
-            <span className="rounded-full bg-card px-3 py-1 shadow-sm">😬 Real regrets</span>
-            <span className="rounded-full bg-card px-3 py-1 shadow-sm">💡 Real lessons</span>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
+            Real trips · Real regrets · Real lessons
           </p>
-          <h1 className="mt-4 max-w-2xl font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+          <h1 className="mt-3 max-w-2xl animate-fade-up font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
             Every journey leaves a lesson.
           </h1>
           <p className="mt-3 max-w-xl text-base leading-relaxed text-ink-muted">
@@ -126,9 +124,10 @@ async function ExploreContent({ searchParams }: { searchParams: PageProps<"/">["
 
   return (
     <>
-      <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-card px-4 py-3 shadow-sm">
+      {/* Stacks on phones; one row from sm up. min-w-0 lets the filter shrink inside the card. */}
+      <div className="mb-8 flex flex-col gap-2 rounded-lg border border-line bg-card px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <CountryFilter countries={countries} selected={country} totalCount={totalCount} />
-        <p className="text-sm text-ink-muted">
+        <p className="shrink-0 text-sm text-ink-muted">
           {country ? `${pluralize(stories.length, "story", "stories")} from ${country}` : `${countries.length} countries`}
         </p>
       </div>

@@ -19,8 +19,8 @@ import "server-only";
  */
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
-/** Every configured key gets a chance per request (bounded for very large pools). */
-const MAX_ATTEMPTS_PER_REQUEST = 8;
+/** Every configured key gets a chance per request (bounded at 10 for very large pools). */
+const MAX_ATTEMPTS_PER_REQUEST = 10;
 const DEFAULT_RATE_LIMIT_REST_MS = 60_000;
 const MIN_REST_MS = 5_000;
 const MAX_REST_MS = 10 * 60_000;

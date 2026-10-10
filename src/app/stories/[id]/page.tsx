@@ -113,7 +113,7 @@ async function StoryContent({ params }: Pick<Props, "params">) {
             {story.isDemo && <Badge tone="demo">Demo example</Badge>}
             {editorial && <Badge>Travel note</Badge>}
           </div>
-          <h1 className="mt-4 font-display text-3xl font-semibold leading-tight tracking-tight text-ink">
+          <h1 className="mt-4 break-words font-display text-2xl font-semibold leading-tight tracking-tight text-ink sm:text-3xl">
             {story.title}
           </h1>
           <p className="mt-2 flex items-start gap-1 text-ink-muted">

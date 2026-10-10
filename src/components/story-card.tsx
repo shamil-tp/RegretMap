@@ -38,7 +38,7 @@ export function StoryCard({
         {story.source === "editorial" && <Badge>Travel note</Badge>}
       </div>
 
-      <h3 className="mt-3 text-lg font-semibold leading-snug text-ink">
+      <h3 className="mt-3 break-words text-lg font-semibold leading-snug text-ink">
         <Link href={`/stories/${story.id}`} className="rounded hover:text-accent-hover">
           {story.title}
         </Link>

@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { categoryEmoji, storyCategories, type StoryCategory } from "@/lib/stories";
+import { storyCategories, type StoryCategory } from "@/lib/stories";
 
 /** Each category gets its own macaron colour; the label always carries the meaning. */
 const categoryTones = {
@@ -17,11 +17,6 @@ const categoryTones = {
 
 export function CategoryBadge({ category }: { category: StoryCategory }) {
   return (
-    <Badge tone={categoryTones[category]}>
-      <span aria-hidden className="mr-1">
-        {categoryEmoji[category]}
-      </span>
-      {storyCategories[category]}
-    </Badge>
+    <Badge tone={categoryTones[category]}>{storyCategories[category]}</Badge>
   );
 }

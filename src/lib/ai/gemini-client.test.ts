@@ -151,10 +151,10 @@ describe("generateJson key rotation", () => {
   });
 
   it("bounds attempts per request even with a very large key pool", async () => {
-    for (let i = 4; i <= 12; i++) vi.stubEnv(`GEMINI_API_KEY${i}`, `extra-${i}-not-real`);
+    for (let i = 4; i <= 14; i++) vi.stubEnv(`GEMINI_API_KEY${i}`, `extra-${i}-not-real`);
     fetchMock.mockImplementation(async () => status(503));
     await generateJson(request);
-    expect(fetchMock).toHaveBeenCalledTimes(8);
+    expect(fetchMock).toHaveBeenCalledTimes(10);
   });
 
   it("moves to another key after a timeout or network error", async () => {

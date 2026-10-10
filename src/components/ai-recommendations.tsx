@@ -54,7 +54,8 @@ export async function AiRecommendations({
         {data.recommendations.map((rec, index) => (
           <li
             key={index}
-            className="rounded-lg border border-line bg-card p-5"
+            className="animate-fade-up rounded-lg border border-line bg-card p-5 transition-shadow duration-200 hover:shadow-md"
+            style={{ animationDelay: `${index * 70}ms` }}
           >
             <div className="flex flex-wrap items-center gap-2">
               <CategoryBadge category={rec.category} />
