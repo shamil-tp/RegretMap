@@ -13,6 +13,7 @@ vi.mock("@/lib/data", async (importOriginal) => ({
 const insert = vi.fn();
 const pendingCount = vi.fn();
 const drafts = vi.fn();
+const updates: { table: string; values: unknown }[] = [];
 vi.mock("@/lib/supabase/admin", () => ({
   getSupabaseAdmin: () => ({
     from: (table: string) => ({
@@ -23,12 +24,14 @@ vi.mock("@/lib/supabase/admin", () => ({
       },
       select: () => ({
         eq: () => ({
-          // Pending-cap query: .eq("status","pending").gte("created_at", ...)
+          // Hourly cap query: .eq("is_demo", false).gte("created_at", ...)
           gte: () => pendingCount(),
           // Draft-proposal lookup: .eq("status","draft").ilike("name", ...).limit(...)
           ilike: () => ({ limit: () => drafts() }),
         }),
       }),
+      // Publishing a reused draft: .update({...}).eq("id", ...)
+      update: (values: unknown) => ({ eq: async () => (updates.push({ table, values }), { error: null }) }),
     }),
   }),
 }));
@@ -58,13 +61,14 @@ beforeEach(() => {
   getDestinationById.mockReset().mockResolvedValue(manali);
   listDestinations.mockReset().mockResolvedValue([manali]);
   drafts.mockReset().mockResolvedValue({ data: [], error: null });
+  updates.length = 0;
   insert.mockReset().mockResolvedValue({ data: { id: "new-story-id" }, error: null });
   pendingCount.mockReset().mockResolvedValue({ count: 0, error: null });
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
 describe("submitStory", () => {
-  it("stores a valid story as pending, non-demo and unpublished", async () => {
+  it("publishes a valid story immediately as non-demo", async () => {
     const result = await submitStory(submission({ place: "Bus stand", travelMonth: "5" }));
 
     expect(result).toEqual({
@@ -83,8 +87,8 @@ describe("submitStory", () => {
       travel_month: 5,
       latitude: null,
       longitude: null,
-      status: "pending",
-      published_at: null,
+      status: "published",
+      published_at: expect.any(String),
       is_demo: false,
     });
   });
@@ -211,7 +215,7 @@ describe("place locations", () => {
       place_name: "Solang Valley",
       latitude: 32.3166,
       longitude: 77.1567,
-      status: "pending",
+      status: "published",
     });
   });
 
@@ -220,26 +224,27 @@ describe("place locations", () => {
     expect(storyInserts()[0][1]).toMatchObject({ latitude: 32.3, longitude: 77.15 });
   });
 
-  it("proposes a hidden draft destination for a place far from any destination", async () => {
+  it("creates and publishes a new destination for a place far from any destination", async () => {
     insert.mockImplementation(async (table: string) =>
       table === "destinations"
-        ? { data: { id: "draft-1", name: "Baga Beach" }, error: null }
+        ? { data: { id: "draft-1", name: "Baga Beach", slug: "baga-beach" }, error: null }
         : { data: { id: "new-story-id" }, error: null },
     );
     const result = await submitStory(
       place({ placeName: "Baga Beach", placeRegion: "Goa", placeLatitude: "15.5553", placeLongitude: "73.7517" }),
     );
-    expect(result).toMatchObject({ ok: true, proposedDestination: true, destination: { name: "Baga Beach", slug: null } });
+    expect(result).toMatchObject({ ok: true, proposedDestination: true, destination: { name: "Baga Beach", slug: "baga-beach" } });
     const destinationInsert = insert.mock.calls.find(([table]) => table === "destinations")?.[1];
-    expect(destinationInsert).toMatchObject({ slug: "baga-beach", name: "Baga Beach", region: "Goa", status: "draft", is_demo: false });
-    expect(storyInserts()[0][1]).toMatchObject({ destination_id: "draft-1", latitude: 15.5553, status: "pending" });
+    expect(destinationInsert).toMatchObject({ slug: "baga-beach", name: "Baga Beach", region: "Goa", status: "published", is_demo: false });
+    expect(storyInserts()[0][1]).toMatchObject({ destination_id: "draft-1", latitude: 15.5553, status: "published" });
   });
 
-  it("reuses a nearby draft with the same name instead of creating another", async () => {
+  it("reuses (and publishes) a nearby draft with the same name instead of creating another", async () => {
     drafts.mockResolvedValue({ data: [{ id: "draft-9", name: "Baga Beach", latitude: 15.556, longitude: 73.752 }], error: null });
     await submitStory(place({ placeName: "Baga Beach", placeLatitude: "15.5553", placeLongitude: "73.7517" }));
     expect(insert.mock.calls.some(([table]) => table === "destinations")).toBe(false);
     expect(storyInserts()[0][1]).toMatchObject({ destination_id: "draft-9" });
+    expect(updates).toEqual([{ table: "destinations", values: { status: "published" } }]);
   });
 
   it("tries a new slug when the first one is taken", async () => {

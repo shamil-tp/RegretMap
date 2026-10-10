@@ -93,7 +93,7 @@ export async function submitStoryAction(
     const storyId = result.storyId;
     if (storyId) {
       // AI moderation runs after the response is sent, so submitting stays fast.
-      // It only labels the review queue; the story stays 'pending' regardless.
+      // It only labels stories for moderators; it never changes their status.
       after(async () => {
         try {
           await moderateStory(storyId);
@@ -104,6 +104,8 @@ export async function submitStoryAction(
       });
     }
     if (viewer) revalidatePath("/account");
+    revalidatePath("/");
+    if (result.destination.slug) revalidatePath(`/destinations/${result.destination.slug}`);
     return {
       status: "submitted",
       destinationName: result.destination.name,
@@ -134,7 +136,7 @@ export async function submitStoryAction(
     case "duplicate_content":
       return {
         status: "error",
-        message: "It looks like this story was already submitted. It's waiting for review.",
+        message: "It looks like this story was already submitted. It's already on RegretMap.",
       };
     default:
       return { status: "error", message: UNAVAILABLE };

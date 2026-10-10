@@ -8,6 +8,7 @@ let currentIp = "203.0.113.1";
 
 const submitStory = vi.fn();
 vi.mock("@/lib/submissions", () => ({ submitStory: (input: unknown) => submitStory(input) }));
+vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
 
 // Capture work scheduled with after() instead of running it.
 const scheduled: (() => Promise<void>)[] = [];

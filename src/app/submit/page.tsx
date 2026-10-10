@@ -20,7 +20,7 @@ export default function SubmitPage({ searchParams }: PageProps<"/submit">) {
       </h1>
       <p className="mt-3 max-w-2xl leading-relaxed text-ink-muted">
         What happened on your trip, what went wrong, and what would you tell the next
-        traveller? Stories are reviewed before they appear on RegretMap.
+        traveller? Stories are published right away and shown anonymously.
       </p>
       <div className="mt-10">
         <Suspense

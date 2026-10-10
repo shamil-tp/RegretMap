@@ -12,15 +12,15 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 /*
  * Trusted story submission. The payload must already be validated with
- * storySubmissionSchema. Whatever the browser sends, new stories are always
- * stored as status = 'pending' (not public) and is_demo = false. This module
+ * storySubmissionSchema. Whatever the browser sends, new stories are stored as
+ * status = 'published' (public immediately — product decision) and
+ * is_demo = false; moderators can still hide or reject them later. This module
  * uses the privileged client and must only be called from server code.
  *
  * Location: either an existing published destination, or a real-world place
  * chosen from the suggestions. A place within ATTACH_RADIUS_KM of a published
  * destination is attached to it (the place becomes the story's place name and
- * pin); otherwise a DRAFT destination is proposed — hidden until a moderator
- * publishes the story.
+ * pin); otherwise a new destination is created and published with the story.
  */
 
 /** A map pin must be within this distance of the story's location. */
@@ -34,7 +34,7 @@ const PROPOSAL_REUSE_KM = 25;
 const DUPLICATE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 /**
- * Shared cap on new pending stories, counted in the database so it holds across
+ * Shared cap on new (non-demo) stories, counted in the database so it holds across
  * server instances and can't be bypassed with forged IP headers.
  */
 export const MAX_PENDING_PER_HOUR = 60;
@@ -124,11 +124,11 @@ export function slugify(name: string) {
 /** Reuses a nearby draft with the same name, or creates a new draft destination. */
 async function findOrCreateProposal(
   plan: Extract<LocationPlan, { kind: "propose" }>,
-): Promise<{ id: string; name: string } | null> {
+): Promise<{ id: string; name: string; slug: string } | null> {
   const admin = getSupabaseAdmin();
   const { data: drafts, error: lookupError } = await admin
     .from("destinations")
-    .select("id, name, latitude, longitude")
+    .select("id, name, slug, latitude, longitude")
     .eq("status", "draft")
     .ilike("name", plan.name.replace(/[%_]/g, "\\$&"))
     .limit(20);
@@ -136,14 +136,19 @@ async function findOrCreateProposal(
     console.error(`[submissions] proposal lookup failed: ${lookupError.code ?? "unknown"}`);
     return null;
   }
-  const reuse = (drafts as { id: string; name: string; latitude: number | null; longitude: number | null }[])
+  const reuse = (drafts as { id: string; name: string; slug: string; latitude: number | null; longitude: number | null }[])
     .find(
       (d) =>
         d.latitude != null &&
         d.longitude != null &&
         distanceKm(plan.coordinates, { latitude: d.latitude, longitude: d.longitude }) <= PROPOSAL_REUSE_KM,
     );
-  if (reuse) return { id: reuse.id, name: reuse.name };
+  if (reuse) {
+    // An older hidden draft becomes public along with the new story.
+    const { error: publishError } = await admin.from("destinations").update({ status: "published" }).eq("id", reuse.id);
+    if (publishError) console.error(`[submissions] draft publish failed: ${publishError.code ?? "unknown"}`);
+    return { id: reuse.id, name: reuse.name, slug: reuse.slug };
+  }
 
   const base = slugify(plan.name);
   for (let attempt = 0; attempt < 6; attempt++) {
@@ -159,13 +164,13 @@ async function findOrCreateProposal(
         description: null,
         latitude: plan.coordinates.latitude,
         longitude: plan.coordinates.longitude,
-        // Hidden until a moderator publishes a story for it.
-        status: "draft",
+        // Published together with the story (no moderator approval step).
+        status: "published",
         is_demo: false,
       })
-      .select("id, name")
+      .select("id, name, slug")
       .single();
-    if (!error && data) return data as { id: string; name: string };
+    if (!error && data) return data as { id: string; name: string; slug: string };
     if (error?.code !== "23505") {
       console.error(`[submissions] proposal insert failed: ${error?.code ?? "unknown"}`);
       return null;
@@ -207,7 +212,7 @@ export async function submitStory(
     destination:
       plan.kind === "existing"
         ? { name: plan.destination.name, slug: plan.destination.slug }
-        : { name: plan.name, slug: null },
+        : { name: plan.name, slug: null as string | null },
     proposedDestination: plan.kind === "propose",
   };
 
@@ -231,6 +236,7 @@ export async function submitStory(
     const proposal = await findOrCreateProposal(plan);
     if (!proposal) return { ok: false, reason: "unavailable" };
     destinationId = proposal.id;
+    accepted.destination.slug = proposal.slug;
   }
 
   // Coordinates only from a map pin or a selected place — never invented.
@@ -257,8 +263,8 @@ export async function submitStory(
         longitude: coordinates?.longitude ?? null,
         submission_key: input.submissionKey,
         // Never taken from the request:
-        status: "pending",
-        published_at: null,
+        status: "published",
+        published_at: new Date(now).toISOString(),
         is_demo: false,
       })
       .select("id")
@@ -298,7 +304,7 @@ async function isOverPendingCap(now: number): Promise<boolean | "unknown"> {
     const { count, error } = await getSupabaseAdmin()
       .from("stories")
       .select("id", { count: "exact", head: true })
-      .eq("status", "pending")
+      .eq("is_demo", false)
       .gte("created_at", new Date(now - 60 * 60 * 1000).toISOString());
     if (error) throw new Error(`${error.code ?? ""} ${error.message ?? ""}`);
     return (count ?? 0) >= MAX_PENDING_PER_HOUR;

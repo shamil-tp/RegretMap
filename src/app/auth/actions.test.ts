@@ -86,8 +86,18 @@ describe("auth actions", () => {
       email: "new@b.co",
     });
     expect(state.signUp.mock.calls[0][0].options.emailRedirectTo).toBe(
-      "http://localhost:3000/auth/callback?next=%2Faccount",
+      "http://localhost:3000/auth/callback?next=%2F",
     );
+  });
+
+  it("uses SITE_URL for the confirmation link when it's configured", async () => {
+    vi.stubEnv("SITE_URL", "https://regret-map.shamiltp.me/");
+    state.signUp.mockResolvedValue({ data: { session: null, user: {} }, error: null });
+    await signUpAction(idle, form({ email: "site@b.co", password: "password123" }));
+    expect(state.signUp.mock.calls.at(-1)![0].options.emailRedirectTo).toBe(
+      "https://regret-map.shamiltp.me/auth/callback?next=%2F",
+    );
+    vi.unstubAllEnvs();
   });
 
   it("rate-limits repeated attempts from one IP", async () => {

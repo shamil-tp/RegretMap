@@ -223,13 +223,13 @@ export function StoryForm({
           tabIndex={-1}
           className="mt-4 font-display text-2xl font-semibold text-ink focus:outline-none"
         >
-          Thanks — your story was submitted for review
+          Thanks — your story is published
         </h2>
         <p className="mx-auto mt-3 max-w-md text-ink-muted">
-          It has been saved but <strong className="text-ink">isn&apos;t public yet</strong>.{" "}
+          It&apos;s saved and <strong className="text-ink">now public</strong>{" "}
           {state.proposedDestination
-            ? `Once a moderator approves it, ${state.destinationName} will be added to RegretMap with your story.`
-            : `Once a moderator approves it, it will appear on the ${state.destinationName} page.`}
+            ? `— ${state.destinationName} was added to RegretMap with your story.`
+            : `on the ${state.destinationName} page.`}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           {state.destinationSlug ? (
@@ -493,8 +493,8 @@ export function StoryForm({
           </span>
         </label>
         <p id="consent-hint" className="text-xs text-ink-muted">
-          Stories are shown anonymously. Every story is reviewed before it&apos;s published,
-          and publishing doesn&apos;t mean it has been verified.
+          Stories are shown anonymously. Your story is published right away and can be
+          removed by moderators if it breaks the guidelines. Publishing doesn&apos;t mean it has been verified.
         </p>
         {errors.consent && <p className="text-sm text-accent-hover">{errors.consent}</p>}
       </div>
@@ -506,7 +506,7 @@ export function StoryForm({
           aria-disabled={pending}
           className={buttonClasses("primary", "min-w-44")}
         >
-          {pending ? "Submitting…" : "Submit for review"}
+          {pending ? "Publishing…" : "Publish story"}
         </button>
         <p aria-live="polite" className="text-sm text-ink-muted">
           {pending ? "Saving your story…" : ""}

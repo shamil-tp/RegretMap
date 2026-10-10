@@ -76,10 +76,15 @@ export async function signUpAction(_previous: AuthFormState, formData: FormData)
   if ("error" in checked) return { status: "error", message: checked.error! };
 
   const requestHeaders = await headers();
+  // SITE_URL (e.g. https://regret-map.shamiltp.me) pins the confirmation link to the
+  // public site; without it, fall back to the current request's origin (local dev).
+  const configuredSite = process.env.SITE_URL?.trim().replace(/\/+$/, "");
   const origin =
+    (configuredSite && /^https?:\/\//.test(configuredSite) ? configuredSite : null) ??
     requestHeaders.get("origin") ??
     `${requestHeaders.get("x-forwarded-proto") ?? "http"}://${requestHeaders.get("host")}`;
-  const next = safeNextPath(formData.get("next"));
+  // After confirming their email, people land on the home page.
+  const next = safeNextPath(formData.get("next"), "/");
 
   const supabase = await createSessionClient();
   const { data, error } = await supabase.auth.signUp({

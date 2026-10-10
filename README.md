@@ -13,8 +13,8 @@ conditions** — not a hotel, room or restaurant rating site.
 
 > **Current status: development preview (Phase 10 of 11).**
 > Destinations and stories are read from Supabase (PostgreSQL) with Row Level
-> Security, and travellers can submit stories, which are saved as **pending review**
-> (not public until a moderator publishes them). The current public content is a
+> Security, and travellers can submit stories, which are **published immediately**
+> (moderators can still reject or hide them). The current public content is a
 > **clearly labelled demo seed** written for development. New submissions get an
 > AI moderation check (Gemini) that only labels the human review queue — it never
 > publishes or rejects anything; moderators publish from `/moderate`. Accounts
@@ -104,7 +104,7 @@ conditions** — not a hotel, room or restaurant rating site.
   and real places (Photon) appear after a short pause; choose one with the mouse or
   keyboard. Changing the text clears the choice. A real place within 50 km of a
   RegretMap destination is filed under it (with the place's pin); otherwise it's
-  **proposed as a new destination**, hidden until a moderator approves the story.
+  **added as a new destination**, published together with the story.
 - Other fields: title, what happened, what went wrong, what you learned and advice
   (all required, with character counts), category, optional specific place, travel
   month/year and an optional **map pin**, plus a required "this is my own
@@ -179,7 +179,7 @@ phases.
 | `PHOTON_API_URL` | No | Yes (optional) | Self-hosted Photon endpoint (https). Empty uses the public `https://photon.komoot.io/api/`. |
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | **Yes (required)** | Supabase project URL (Dashboard → Project Settings → Data API). |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | **Yes (required)** | Publishable key (`sb_publishable_…`). Used on the server for public reads; RLS applies. |
-| `SUPABASE_SECRET_KEY` | **No — server only** | **Yes (for submissions)** | Secret (`sb_secret_…`) or legacy `service_role` key. Used only by the server to insert submitted stories as `pending`. Never expose it. |
+| `SUPABASE_SECRET_KEY` | **No — server only** | **Yes (for submissions)** | Secret (`sb_secret_…`) or legacy `service_role` key. Used only by the server to insert submitted stories (published immediately). Never expose it. |
 | `GEMINI_API_KEY` | **No — server only** | Yes (AI) | Primary Gemini API key ([Google AI Studio](https://aistudio.google.com/apikey)). Without it, stories are still saved ("unmoderated") and pages show quoted lessons instead of an AI summary. |
 | `GEMINI_API_KEY2`, `GEMINI_API_KEY3`, … | **No — server only** | Optional | Extra keys for rotation (`GEMINI_API_KEY_2` style also works). Empty ones are ignored. |
 | `GEMINI_MODEL` | No | Yes (AI) | Gemini model id, e.g. `gemini-3.1-flash-lite`. |
@@ -241,7 +241,7 @@ src/
 │   ├── supabase/server.ts            Server-only Supabase client (publishable key)
 │   ├── supabase/admin.ts             Server-only privileged client (submissions only)
 │   ├── story-submission.ts           Submission schema (zod), shared by form + server
-│   ├── submissions.ts                Trusted submit: destination check, pending insert
+│   ├── submissions.ts                Trusted submit: destination check, published insert
 │   ├── rate-limit.ts                 In-memory rate limiter
 │   ├── moderation/policy.ts          Moderation policy, output schema, local signals
 │   ├── moderation/gemini.ts          Server-only Gemini call (REST, JSON output)
@@ -386,15 +386,15 @@ public insert policy:
    server instance (both in memory), plus a hidden honeypot field for bots.
 4. `src/lib/submissions.ts` checks the destination is published (through the
    public, RLS-enforced client), checks any map pin is within 200 km of it, and
-   catches the same story being sent twice. It also counts pending stories created
+   catches the same story being sent twice. It also counts new (non-demo) stories created
    in the last hour **in the database** and refuses new ones above 60 — a shared
    cap that works across server instances and can't be bypassed with forged IP
    headers. If that count can't be read, nothing is written (fails closed).
 5. The row is inserted with the server-only secret key, always with
-   `status = 'pending'`, `published_at = null`, `is_demo = false` and the form's
+   `status = 'published'`, `published_at = now()`, `is_demo = false` and the form's
    one-time `submission_key` (unique, so repeats can't create a second story).
 
-Pending stories never appear in feeds, maps or story pages. Database errors are
+Pending, hidden or rejected stories never appear in feeds, maps or story pages. Database errors are
 logged on the server by code only — never with story text.
 
 ### Gemini key pool and rotation
@@ -481,7 +481,7 @@ Conversations live only in the page; nothing is stored.
 
 ### AI-assisted moderation (annotate only)
 
-After a new story is saved as `pending`, the server asks Gemini to classify it
+After a new story is saved (and published), the server asks Gemini to classify it
 **after the response has been sent** (Next.js `after()`), so submitting stays
 fast. The AI result is stored in the private `story_moderation` table and only
 **labels the review queue** — it never changes `stories.status`. A human always

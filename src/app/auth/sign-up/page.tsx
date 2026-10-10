@@ -24,5 +24,5 @@ export default function SignUpPage({ searchParams }: PageProps<"/auth/sign-up">)
 
 async function SignUpForm({ searchParams }: Pick<PageProps<"/auth/sign-up">, "searchParams">) {
   const params = await searchParams;
-  return <AuthForm mode="sign-up" next={safeNextPath(params.next)} />;
+  return <AuthForm mode="sign-up" next={safeNextPath(params.next, "/")} />;
 }
