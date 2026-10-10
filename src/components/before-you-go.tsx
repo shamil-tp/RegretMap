@@ -1,8 +1,7 @@
 import { Lightbulb } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import type { BeforeYouGoItem } from "@/lib/before-you-go";
-import { storyNoun } from "@/lib/stories";
+import { evidenceLabel, type BeforeYouGoItem } from "@/lib/before-you-go";
 
 export function BeforeYouGo({
   items,
@@ -17,6 +16,7 @@ export function BeforeYouGo({
   /** Optional AI summary shown above the quoted lessons. */
   aiSummary?: React.ReactNode;
 }) {
+  const hasEditorial = items.some((item) => item.editorialCount > 0);
   return (
     <section aria-labelledby="before-you-go-heading">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -29,15 +29,24 @@ export function BeforeYouGo({
         {fromDemo && <Badge tone="demo">Derived from demo stories</Badge>}
       </div>
       <p className="mt-2 max-w-2xl text-sm text-ink-muted">
-        Practical lessons from travellers&apos; stories about {destinationName}. They are
-        personal experiences, not verified or current advice — check official sources
-        for permits, weather, safety and transport.
+        {hasEditorial ? (
+          <>
+            Practical lessons from travellers&apos; stories and RegretMap travel notes about{" "}
+            {destinationName}. They are not verified or current advice
+          </>
+        ) : (
+          <>
+            Practical lessons from travellers&apos; stories about {destinationName}. They are
+            personal experiences, not verified or current advice
+          </>
+        )}{" "}
+        — check official sources for permits, weather, safety and transport.
       </p>
 
       {aiSummary}
       {aiSummary && items.length > 0 && (
         <h3 className="mt-8 text-sm font-semibold uppercase tracking-wide text-ink-muted">
-          In travellers&apos; own words
+          {hasEditorial ? "Quoted from the stories" : <>In travellers&apos; own words</>}
         </h3>
       )}
 
@@ -67,9 +76,7 @@ export function BeforeYouGo({
                 ))}
               </ul>
               <p className="mt-2 text-xs text-ink-muted">
-                {item.storyCount === 1
-                  ? "One traveller reported this"
-                  : `Based on ${storyNoun(item.storyCount, fromDemo)}`}
+                {evidenceLabel(item.storyCount, item.editorialCount, fromDemo)}
                 {item.seasonLabel && ` · Travelled ${item.seasonLabel}`}
               </p>
             </li>

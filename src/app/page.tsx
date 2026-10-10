@@ -12,11 +12,14 @@ import { StoryExplorer } from "@/components/story-explorer";
 import {
   DataUnavailableError,
   getHelpfulState,
+  type DestinationSummary,
   listAllStories,
   listDestinations,
 } from "@/lib/data";
 import { getViewer } from "@/lib/supabase/session";
 import { formatLocation, storyNoun } from "@/lib/stories";
+
+const FEATURED_DESTINATIONS = 10;
 
 export default function ExplorePage() {
   return (
@@ -27,8 +30,9 @@ export default function ExplorePage() {
             Every journey leaves a lesson.
           </h1>
           <p className="mt-3 max-w-xl text-base leading-relaxed text-ink-muted">
-            Learn from real travellers&apos; experiences, discover useful
-            destination tips, and avoid repeating common travel mistakes.
+            Travel lessons from across India: stories shared by travellers and
+            practical notes from the RegretMap team, so you can avoid repeating
+            common travel mistakes.
           </p>
           <div className="relative z-10 mt-6">
             <Suspense fallback={<div className="h-11 max-w-xl animate-pulse rounded-md bg-surface" />}>
@@ -84,12 +88,18 @@ async function ExploreContent() {
   if (stories.length === 0) return <NoStoriesYet />;
   const viewer = await getViewer();
   const helpful = await getHelpfulState(stories.map((s) => s.id), viewer?.id ?? null);
+  // Most-documented destinations first; the rest stay one click away.
+  const byStories = [...destinations].sort(
+    (a, b) => b.storyCount - a.storyCount || a.name.localeCompare(b.name),
+  );
+  const featured = byStories.slice(0, FEATURED_DESTINATIONS);
+  const rest = byStories.slice(FEATURED_DESTINATIONS);
 
   return (
     <StoryExplorer
       stories={stories}
       mapHeading="Explore the map"
-      storiesHeading="Traveller stories"
+      storiesHeading="Stories and travel notes"
       enableLocationPicker
       helpful={helpful}
       aside={
@@ -97,31 +107,43 @@ async function ExploreContent() {
           <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-ink-muted">
             Destinations
           </h2>
-          <ul className="mt-2 divide-y divide-line">
-            {destinations.map((destination) => (
-              <li key={destination.slug}>
-                <Link
-                  href={`/destinations/${destination.slug}`}
-                  className="group flex items-center justify-between gap-4 rounded py-3"
-                >
-                  <span>
-                    <span className="font-medium text-ink group-hover:text-accent-hover">
-                      {destination.name}
-                    </span>
-                    <span className="block text-sm text-ink-muted">
-                      {formatLocation(destination)}
-                    </span>
-                  </span>
-                  <span className="flex shrink-0 items-center gap-1 text-sm text-ink-muted">
-                    {storyNoun(destination.storyCount, destination.isDemo)}
-                    <ChevronRight aria-hidden className="size-4" />
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <DestinationList destinations={featured} />
+          {rest.length > 0 && (
+            <details className="mt-1">
+              <summary className="cursor-pointer rounded py-2 text-sm font-medium text-accent hover:underline">
+                More destinations ({rest.length})
+              </summary>
+              <DestinationList destinations={rest} />
+            </details>
+          )}
         </>
       }
     />
+  );
+}
+
+function DestinationList({ destinations }: { destinations: DestinationSummary[] }) {
+  return (
+    <ul className="mt-2 divide-y divide-line">
+      {destinations.map((destination) => (
+        <li key={destination.slug}>
+          <Link
+            href={`/destinations/${destination.slug}`}
+            className="group flex items-center justify-between gap-4 rounded py-3"
+          >
+            <span>
+              <span className="font-medium text-ink group-hover:text-accent-hover">
+                {destination.name}
+              </span>
+              <span className="block text-sm text-ink-muted">{formatLocation(destination)}</span>
+            </span>
+            <span className="flex shrink-0 items-center gap-1 text-sm text-ink-muted">
+              {storyNoun(destination.storyCount, destination.isDemo)}
+              <ChevronRight aria-hidden className="size-4" />
+            </span>
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }

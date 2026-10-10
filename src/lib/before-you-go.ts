@@ -1,5 +1,7 @@
 import {
+  pluralize,
   seasonOf,
+  storyNoun,
   travelSeasons,
   type StoryCategory,
   type TravelStory,
@@ -24,6 +26,8 @@ export type BeforeYouGoItem = {
   /** Lessons quoted from the source stories, each linked to its story. */
   lessons: { storyId: string; text: string }[];
   storyCount: number;
+  /** How many of those are RegretMap travel notes rather than personal accounts. */
+  editorialCount: number;
   /** Set only when every supporting story shares the same travel season. */
   seasonLabel?: string;
 };
@@ -52,8 +56,23 @@ export function buildBeforeYouGo(stories: TravelStory[], limit = 4): BeforeYouGo
         heading: headings[category],
         lessons: group.slice(0, 3).map((s) => ({ storyId: s.id, text: s.lesson! })),
         storyCount: group.length,
+        editorialCount: group.filter((s) => s.source === "editorial").length,
         seasonLabel:
           seasons.size === 1 && onlySeason ? travelSeasons[onlySeason].label : undefined,
       };
     });
+}
+
+/** Honest evidence label: personal accounts and editorial notes are counted separately. */
+export function evidenceLabel(storyCount: number, editorialCount: number, fromDemo: boolean) {
+  const community = storyCount - editorialCount;
+  if (editorialCount === 0) {
+    return storyCount === 1 ? "One traveller reported this" : `Based on ${storyNoun(storyCount, fromDemo)}`;
+  }
+  if (community === 0) {
+    return editorialCount === 1
+      ? "From one RegretMap travel note"
+      : `Based on ${pluralize(editorialCount, "RegretMap travel note")}`;
+  }
+  return `Based on ${pluralize(community, "traveller story", "traveller stories")} and ${pluralize(editorialCount, "travel note")}`;
 }

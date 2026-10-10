@@ -10,7 +10,8 @@ Read `CLAUDE.md` first (product rules + phase plan), then this file.
 | 0–9 | Audit → UI → map → pages → Supabase schema/RLS → submissions → heatmap → Gemini moderation → "Before you go" → destination chat | Done, committed |
 | 10 | Auth, Helpful reactions, `/moderate`, location autocomplete | Done, committed as `8f4039c` ("implemented authentication") |
 | Post-10 change | **Stories publish immediately** (no moderator approval) + confirmation redirect to production | Done locally, **NOT committed** |
-| 11 | Quality, accessibility, launch readiness | Not started — next phase |
+| 11 (owner-defined) | India-wide editorial content + story provenance | Done locally, NOT committed; SQL not yet run on Supabase (see §2b) |
+| Next | Quality, accessibility, launch readiness (CLAUDE.md §10 Phase 11) | Not started |
 
 Production URL: **https://regret-map.shamiltp.me**
 
@@ -44,6 +45,23 @@ say "saved but isn't public yet"; now stories go live immediately.
 - `npm run build`: compiled successfully.
 
 **Not verified:** a real submission against live Supabase after this change, and a real confirmation email.
+
+## 2b. Phase 11 — India editorial content (2026-10-11)
+
+- New column `stories.source` ('community' default | 'editorial'):
+  `supabase/migrations/20261011170000_story_source.sql` (also appended to `setup_all.sql`).
+  The app now SELECTs `source`, so **apply this migration before deploying the code**,
+  or every story query fails with "data unavailable".
+- 201 editorial travel notes / 132 destinations, all 28 states + 8 UTs. Source data:
+  `supabase/seed/india/*.mjs`; `npm run seed:india` validates and regenerates
+  `supabase/seed_india_editorial.sql` + `supabase/tests/india_seed_check.sql`.
+  Idempotent (fixed UUIDs, `on conflict`), never touches community rows or existing destinations.
+- Editorial notes are labelled "Travel note" / "RegretMap travel note" in the UI, counted separately
+  in Before-you-go and AI summaries, and tagged `kind: travel_note` in Gemini prompts (`rec-v2`).
+- Optional `supabase/retire_demo_seed.sql` hides the 18 is_demo stories and clears is_demo on the
+  5 seed destinations (reversible; nothing deleted).
+- SQL run order: migration → seed_india_editorial.sql → india_seed_check.sql → (optional) retire_demo_seed.sql.
+- Feed shows 20 cards with "Show more"; home lists top 10 destinations + a disclosure; `STORY_LIMIT.all` = 400.
 
 ## 3. Owner must still do (remote, manual)
 

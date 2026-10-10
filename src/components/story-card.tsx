@@ -35,6 +35,7 @@ export function StoryCard({
         <Badge tone="accent">{storyCategories[story.category]}</Badge>
         {travelDate && <Badge>Travelled {travelDate}</Badge>}
         {story.isDemo && <Badge tone="demo">Demo example</Badge>}
+        {story.source === "editorial" && <Badge>Travel note</Badge>}
       </div>
 
       <h3 className="mt-3 text-lg font-semibold leading-snug text-ink">
@@ -56,7 +57,7 @@ export function StoryCard({
       {story.lesson && (
         <div className="mt-4 border-l-2 border-accent pl-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-            What I&apos;d do differently
+            {story.source === "editorial" ? "The lesson" : <>What I&apos;d do differently</>}
           </p>
           <p className="mt-1 text-[0.95rem] leading-relaxed text-ink">{story.lesson}</p>
         </div>

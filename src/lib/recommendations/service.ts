@@ -38,6 +38,7 @@ Rules:
 - Each recommendation must cite the refs (e.g. "S2") of the stories that support it. Never cite a ref that isn't provided.
 - 3 to 5 recommendations if the stories support them; fewer if not. Prefer lessons repeated across stories.
 - If only one story supports a point, phrase it as one traveller's experience. If stories disagree, set mixed_experiences to true and say so.
+- Items with kind "travel_note" are RegretMap editorial notes, not personal experiences: never describe them as a traveller's experience (say "a RegretMap travel note suggests…").
 - These are personal experiences, not verified or current facts. Don't state rules, prices, permits, weather or safety as current facts; suggest checking official sources where relevant.
 - Never call the destination dangerous or bad, and never rate it. No links or URLs.
 - overview: 1-2 neutral sentences. title: a short imperative tip (max 10 words). advice: 1-2 sentences. limitations: optional, one sentence about gaps in the evidence.`;

@@ -1,6 +1,7 @@
 import { Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { evidenceLabel } from "@/lib/before-you-go";
 import { getDestinationRecommendations } from "@/lib/recommendations/service";
 import {
   formatPublishedDate,
@@ -19,12 +20,14 @@ export async function AiRecommendations({
   stories: StoryWithDestination[];
 }) {
   const result = await getDestinationRecommendations(destination, stories);
+  const editorialIds = new Set(stories.filter((s) => s.source === "editorial").map((s) => s.id));
+  const quotedFrom = editorialIds.size > 0 ? "the stories and travel notes" : "travellers";
 
   if (result.status === "insufficient") {
     return (
       <Note>
         There aren&apos;t enough published stories about {destination.name} yet for a
-        summary. The lessons below are quoted directly from travellers.
+        summary. The lessons below are quoted directly from {quotedFrom}.
       </Note>
     );
   }
@@ -32,7 +35,7 @@ export async function AiRecommendations({
     return (
       <Note>
         The AI summary isn&apos;t available right now. The lessons below are quoted
-        directly from travellers.
+        directly from {quotedFrom}.
       </Note>
     );
   }
@@ -58,9 +61,11 @@ export async function AiRecommendations({
             </div>
             <p className="mt-1 text-[0.95rem] leading-relaxed text-ink">{rec.advice}</p>
             <p className="mt-1.5 text-xs text-ink-muted">
-              {rec.evidenceCount === 1
-                ? "One traveller reported this"
-                : `Based on ${rec.evidenceCount} stories`}
+              {evidenceLabel(
+                rec.evidenceCount,
+                rec.sources.filter((source) => editorialIds.has(source.id)).length,
+                false,
+              )}
               {rec.mixedExperiences && " · Experiences differ"}
               {" · "}
               <span className="sr-only">Sources: </span>
@@ -82,7 +87,11 @@ export async function AiRecommendations({
 
       {data.limitations && <p className="mt-4 text-sm text-ink-muted">{data.limitations}</p>}
       <p className="mt-4 border-t border-line pt-3 text-xs text-ink-muted">
-        Summarised by AI from travellers&apos; personal stories — not verified facts or
+        Summarised by AI from{" "}
+        {editorialIds.size > 0
+          ? "travellers' stories and RegretMap travel notes"
+          : "travellers' personal stories"}{" "}
+        — not verified facts or
         current advice. Generated {formatPublishedDate(data.generatedAt)}.
       </p>
     </div>

@@ -15,7 +15,7 @@ import {
  * so the model can never invent or redirect a citation.
  */
 
-export const PROMPT_VERSION = "rec-v1";
+export const PROMPT_VERSION = "rec-v2";
 /** Fewer published stories than this → honest "not enough evidence" state. */
 export const MIN_EVIDENCE_STORIES = 2;
 /** Upper bound on stories sent to the model (newest first). */
@@ -48,6 +48,7 @@ export function buildEvidencePayload(destinationName: string, stories: StoryWith
     refs.set(ref, story);
     return {
       ref,
+      kind: story.source === "editorial" ? "travel_note" : "traveller_story",
       category: story.category,
       travel_month: story.travelMonth ? formatTravelMonth(story.travelMonth) : undefined,
       place: clip(story.place, 80),

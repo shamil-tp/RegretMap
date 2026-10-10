@@ -87,6 +87,7 @@ async function StoryContent({ params }: Pick<Props, "params">) {
   }
 
   const travelDate = formatTravelDate(story);
+  const editorial = story.source === "editorial";
   const point = storiesToMapPoints([story]);
   const viewer = await getViewer();
   const helpful = await getHelpfulState([story.id], viewer?.id ?? null);
@@ -107,6 +108,7 @@ async function StoryContent({ params }: Pick<Props, "params">) {
             <Badge tone="accent">{storyCategories[story.category]}</Badge>
             {travelDate && <Badge>Travelled {travelDate}</Badge>}
             {story.isDemo && <Badge tone="demo">Demo example</Badge>}
+            {editorial && <Badge>Travel note</Badge>}
           </div>
           <h1 className="mt-4 font-display text-3xl font-semibold leading-tight tracking-tight text-ink">
             {story.title}
@@ -126,17 +128,25 @@ async function StoryContent({ params }: Pick<Props, "params">) {
           </p>
           <p className="mt-1 text-sm text-ink-muted">
             {story.isDemo ? "Sample date" : "Published"} {formatPublishedDate(story.publishedAt)} ·{" "}
-            {story.isDemo ? "Illustrative demo story, not a real submission" : "Community story"}
+            {story.isDemo
+              ? "Illustrative demo story, not a real submission"
+              : editorial
+                ? "RegretMap travel note"
+                : "Community story"}
           </p>
 
-          <StorySection title="What happened">{story.body}</StorySection>
+          <StorySection title={editorial ? "The situation" : "What happened"}>
+            {story.body}
+          </StorySection>
           {story.challenge && (
-            <StorySection title="What went wrong">{story.challenge}</StorySection>
+            <StorySection title={editorial ? "What catches people out" : "What went wrong"}>
+              {story.challenge}
+            </StorySection>
           )}
           {story.lesson && (
             <section className="mt-8 border-l-2 border-accent pl-4">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
-                What I&apos;d do differently
+                {editorial ? "The lesson" : <>What I&apos;d do differently</>}
               </h2>
               <p className="mt-2 text-base leading-relaxed text-ink">{story.lesson}</p>
             </section>
@@ -146,7 +156,14 @@ async function StoryContent({ params }: Pick<Props, "params">) {
           )}
 
           <p className="mt-8 rounded-md bg-surface px-3 py-2.5 text-sm text-ink-muted">
-            This is one traveller&apos;s personal account, not verified or current advice.
+            {editorial ? (
+              <>
+                This travel note was written by the RegretMap team from general travel
+                guidance. It isn&apos;t a personal account and may be out of date.
+              </>
+            ) : (
+              <>This is one traveller&apos;s personal account, not verified or current advice.</>
+            )}{" "}
             Check official sources for permits, weather, safety and transport.
           </p>
 

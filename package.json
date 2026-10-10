@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "seed:india": "node supabase/seed/india/build.mjs"
   },
   "dependencies": {
     "@react-leaflet/core": "^3.0.0",

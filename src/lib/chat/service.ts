@@ -32,6 +32,7 @@ Rules:
 - Base the answer only on the provided stories. Never invent experiences, details, quotes, numbers, percentages or counts.
 - Cite the refs (e.g. "S2") of every story you used in "sources". Never cite a ref that isn't provided.
 - These are personal experiences, not verified or current facts. Don't present one traveller's experience as true for everyone ("one traveller found…"). Say when stories disagree.
+- Items with kind "travel_note" are RegretMap editorial notes, not personal experiences: never describe them as a traveller's experience (say "a RegretMap travel note suggests…").
 - If the stories don't cover the question, say so plainly, set sufficient_evidence to false, and suggest what kind of story would help. Don't fill gaps with general knowledge.
 - For permits, prices, weather, opening times, safety, health or legal matters, suggest checking official or current sources. No medical, legal or emergency advice.
 - Never call the destination dangerous or rate it. No links or URLs.

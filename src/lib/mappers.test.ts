@@ -73,4 +73,10 @@ describe("isUuid", () => {
     expect(isUuid("1; drop table stories")).toBe(false);
     expect(isUuid("")).toBe(false);
   });
+
+  it("maps story provenance, treating unknown values as community", () => {
+    expect(mapStory(storyRow({ source: "editorial" })).source).toBe("editorial");
+    expect(mapStory(storyRow({ source: "community" })).source).toBe("community");
+    expect(mapStory(storyRow({ source: "something-else" })).source).toBe("community");
+  });
 });

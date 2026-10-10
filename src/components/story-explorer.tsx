@@ -6,11 +6,15 @@ import { ExploreMap } from "@/components/map/explore-map";
 import { HeatmapLegend, MapLayerToggle } from "@/components/map/map-layer-controls";
 import { StoryCard } from "@/components/story-card";
 import { StoryFilters, useStoryFilters } from "@/components/story-filters";
+import { buttonClasses } from "@/components/ui/button";
 import { StateMessage } from "@/components/ui/state-message";
 import { showsHeat, type MapLayers } from "@/lib/heatmap";
 import type { HelpfulState } from "@/lib/helpful";
 import { storiesToMapPoints } from "@/lib/map";
 import type { StoryWithDestination } from "@/lib/stories";
+
+/** Story cards rendered at a time; the map always shows every filtered story. */
+const FEED_PAGE = 20;
 
 /**
  * Map + filterable story feed. The same filtered list drives the map pins, the
@@ -44,6 +48,11 @@ export function StoryExplorer({
   const points = useMemo(() => storiesToMapPoints(visible), [visible]);
   const hasDemo = stories.some((story) => story.isDemo);
   const withoutLocation = visible.length - points.length;
+  // The page size resets whenever the filtered list changes.
+  const [page, setPage] = useState({ list: visible, count: FEED_PAGE });
+  const highlightedIndex = highlightedId ? visible.findIndex((s) => s.id === highlightedId) : -1;
+  const shownCount = Math.max(page.list === visible ? page.count : FEED_PAGE, highlightedIndex + 1);
+  const shown = visible.slice(0, shownCount);
 
   function showOnMap(id: string) {
     // A single story is found by its pin, so make sure pins are visible.
@@ -114,9 +123,9 @@ export function StoryExplorer({
           />
         </div>
 
-        {visible.length > 0 ? (
+        {visible.length > 0 && (
           <div className="mt-2 divide-y divide-line">
-            {visible.map((story) => (
+            {shown.map((story) => (
               <StoryCard
                 key={story.id}
                 story={story}
@@ -135,7 +144,22 @@ export function StoryExplorer({
               />
             ))}
           </div>
-        ) : (
+        )}
+        {shown.length < visible.length && (
+          <div className="mt-4 flex flex-col items-center gap-1 border-t border-line pt-6">
+            <button
+              type="button"
+              onClick={() => setPage({ list: visible, count: shownCount + FEED_PAGE })}
+              className={buttonClasses("secondary")}
+            >
+              Show more stories
+            </button>
+            <p className="text-xs text-ink-muted">
+              Showing {shown.length} of {visible.length}
+            </p>
+          </div>
+        )}
+        {visible.length === 0 && (
           <StateMessage
             icon={SearchX}
             title="No stories match these filters"

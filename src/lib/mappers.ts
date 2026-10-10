@@ -16,7 +16,7 @@ export const DESTINATION_COLUMNS =
 
 export const STORY_COLUMNS =
   "id, destination_id, title, body, category, place_name, latitude, longitude, " +
-  "travel_month, travel_year, challenge, lesson, advice, published_at, is_demo, " +
+  "travel_month, travel_year, challenge, lesson, advice, published_at, is_demo, source, " +
   "destination:destinations!inner(slug, name, region, country)";
 
 export type DestinationRow = {
@@ -47,6 +47,7 @@ export type StoryRow = {
   advice: string | null;
   published_at: string | null;
   is_demo: boolean;
+  source: string;
   destination: {
     slug: string;
     name: string;
@@ -96,6 +97,8 @@ export function mapStory(row: StoryRow): StoryWithDestination {
     // Published rows always have published_at (DB constraint).
     publishedAt: row.published_at ?? new Date(0).toISOString(),
     isDemo: row.is_demo,
+    // Anything unexpected is treated as a community story (the DB constrains it).
+    source: row.source === "editorial" ? "editorial" : "community",
     destination: {
       slug: row.destination.slug,
       name: row.destination.name,

@@ -31,7 +31,7 @@ export class DataUnavailableError extends Error {
 export type DestinationSummary = Destination & { storyCount: number };
 
 /** Upper bounds until pagination arrives in a later phase. */
-export const STORY_LIMIT = { all: 100, perDestination: 200 } as const;
+export const STORY_LIMIT = { all: 400, perDestination: 200 } as const;
 const DESTINATION_LIMIT = 500;
 
 function fail(operation: string, error: unknown): never {

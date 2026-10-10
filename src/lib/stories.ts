@@ -20,6 +20,13 @@ export type StoryCategory = keyof typeof storyCategories;
 
 export type Coordinates = { latitude: number; longitude: number };
 
+/**
+ * community: a personal account submitted by a traveller.
+ * editorial: a RegretMap travel note written from general travel guidance —
+ * not a personal experience, and always labelled as a travel note.
+ */
+export type StorySource = "community" | "editorial";
+
 export type Destination = {
   id: string;
   slug: string;
@@ -56,6 +63,7 @@ export type TravelStory = {
   publishedAt: string;
   /** True for development-only illustrative content. */
   isDemo: boolean;
+  source: StorySource;
 };
 
 /** A story with the minimal destination details needed to display it. */

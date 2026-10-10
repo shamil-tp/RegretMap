@@ -18,6 +18,7 @@ export function storyRow(overrides: Partial<StoryRow> = {}): StoryRow {
     advice: null,
     published_at: "2026-02-14T00:00:00+00:00",
     is_demo: false,
+    source: "community",
     destination: { slug: "testville", name: "Testville", region: "Test Region", country: null },
     ...overrides,
   };
@@ -35,6 +36,7 @@ export function story(overrides: Partial<StoryWithDestination> = {}): StoryWithD
     category: "transport",
     publishedAt: "2026-01-01T00:00:00Z",
     isDemo: false,
+    source: "community",
     destination: { slug: "testville", name: "Testville" },
     ...overrides,
   };
