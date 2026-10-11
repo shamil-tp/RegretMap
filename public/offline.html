@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#FFFFFF" />
+    <title>You're offline — RegretMap</title>
+    <link rel="icon" href="/pwa-icon/192.png" />
+    <style>
+      :root { color-scheme: light; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 16px;
+        background-color: #f7f6f2;
+        background-image: radial-gradient(rgb(0 0 0 / 0.08) 1px, transparent 1px);
+        background-size: 24px 24px;
+        color: #111111;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      main {
+        width: 100%;
+        max-width: 30rem;
+        background: #ffffff;
+        border: 2.5px solid #000;
+        border-radius: 18px;
+        box-shadow: 5px 5px 0 0 #000;
+        padding: 28px 24px;
+      }
+      .stamp {
+        display: inline-block;
+        background: #ff3b30;
+        color: #fff;
+        border: 2.5px solid #000;
+        border-radius: 10px;
+        padding: 2px 8px;
+        font-weight: 800;
+        box-shadow: 2px 2px 0 0 #000;
+      }
+      h1 { margin: 16px 0 8px; font-size: 1.6rem; letter-spacing: -0.02em; }
+      p { margin: 0 0 12px; line-height: 1.55; color: #333; }
+      ul { margin: 0 0 20px; padding-left: 1.2rem; color: #555; line-height: 1.6; }
+      .actions { display: flex; flex-wrap: wrap; gap: 12px; }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 8px 20px;
+        border: 2.5px solid #000;
+        border-radius: 9999px;
+        box-shadow: 3px 3px 0 0 #000;
+        font: inherit;
+        font-weight: 700;
+        color: #000;
+        text-decoration: none;
+        cursor: pointer;
+        background: #fff;
+        transition: transform 0.15s, box-shadow 0.15s;
+      }
+      .btn.primary { background: #ffd600; }
+      .btn:hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0 0 #000; }
+      .btn:active { transform: translate(3px, 3px); box-shadow: none; }
+      .btn:focus-visible { outline: 3px solid #0055ff; outline-offset: 2px; }
+      @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <span class="stamp" aria-hidden="true">RM</span>
+      <h1>You're offline</h1>
+      <p>RegretMap can't reach the internet right now, so this page couldn't load.</p>
+      <p>These need a connection:</p>
+      <ul>
+        <li>Live stories, reactions and comments</li>
+        <li>AI summaries and the travel chat</li>
+        <li>Signing in, signing up and sharing a story</li>
+        <li>Map tiles and new map data</li>
+      </ul>
+      <div class="actions">
+        <button type="button" class="btn primary" onclick="location.reload()">Retry</button>
+        <a class="btn" href="/">Go to the home page</a>
+      </div>
+    </main>
+    <script>
+      // Reload automatically once the connection comes back.
+      window.addEventListener("online", () => location.reload());
+    </script>
+  </body>
+</html>

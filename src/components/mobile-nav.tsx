@@ -3,6 +3,7 @@
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { InstallAppButton } from "@/components/pwa/install-app-button";
 
 /**
  * Mobile menu. Always mounted so it can animate: it slides and fades in, links
@@ -68,6 +69,7 @@ export function MobileNav({
             </li>
           ))}
         </ul>
+        {open && <InstallAppButton className="px-3 pb-2 pt-1" />}
       </nav>
     </div>
   );

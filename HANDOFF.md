@@ -160,6 +160,17 @@ say "saved but isn't public yet"; now stories go live immediately.
   (`lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain`).
 - Story cards show a reply count pill linking to `/stories/[id]#discussion` (`getCommentCounts`).
 
+## 2k. PWA (2026-10-12)
+
+- `src/app/manifest.ts` (standalone, theme #FFFFFF, bg #F7F6F2); icons generated with next/og at
+  `src/app/pwa-icon/[name]/route.tsx` (192, 512, maskable-512, apple-180; prerendered).
+- Hand-written `public/sw.js` (no deps): cache-first only for `/_next/static/*` + `/pwa-icon/*`;
+  navigations network-only with `public/offline.html` fallback (HTML never cached); bypasses
+  cross-origin, non-GET, RSC, `/api/*`, `/auth/*`. Bump `VERSION` when changing behaviour.
+  Policy tested against the real file in `src/lib/pwa.test.ts`. Headers for /sw.js in next.config.
+- Client: `ServiceWorkerRegister` (prod only), `ConnectionStatus` (offline-only notice),
+  `InstallAppButton` (footer + mobile menu; shared beforeinstallprompt store; iOS instructions).
+
 ## 3. Owner must still do (remote, manual)
 
 1. **Apply the Phase 10 migration.** It is NOT on Supabase yet; checked 2026-10-11:

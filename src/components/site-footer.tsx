@@ -1,3 +1,5 @@
+import { InstallAppButton } from "@/components/pwa/install-app-button";
+
 export function SiteFooter() {
   return (
     <footer className="border-t border-line bg-lavender/40">
@@ -11,6 +13,7 @@ export function SiteFooter() {
           official sources for current safety, weather, and transport
           information.
         </p>
+        <InstallAppButton className="mt-4" />
       </div>
     </footer>
   );

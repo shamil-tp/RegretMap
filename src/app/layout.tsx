@@ -1,5 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans, JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { ConnectionStatus } from "@/components/pwa/connection-status";
+import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
@@ -31,6 +33,16 @@ export const metadata: Metadata = {
   title: "RegretMap — Every journey leaves a lesson.",
   description:
     "Learn from real travellers' experiences, discover useful destination tips, and avoid repeating common travel mistakes.",
+  applicationName: "RegretMap",
+  appleWebApp: { capable: true, title: "RegretMap", statusBarStyle: "default" },
+  icons: {
+    icon: [{ url: "/pwa-icon/192.png", sizes: "192x192", type: "image/png" }],
+    apple: [{ url: "/pwa-icon/apple-180.png", sizes: "180x180", type: "image/png" }],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#FFFFFF",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -51,6 +63,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {children}
         </main>
         <SiteFooter />
+        <ConnectionStatus />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );
