@@ -14,7 +14,7 @@ export function MapLayerToggle({
       {(Object.keys(mapLayerLabels) as MapLayers[]).map((option) => (
         <label
           key={option}
-          className="cursor-pointer rounded px-3 py-1 text-ink-muted has-[:checked]:bg-ink has-[:checked]:text-white has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent"
+          className="cursor-pointer rounded-sm px-3 py-1 text-ink-muted transition-colors duration-150 has-[:checked]:bg-ink has-[:checked]:text-white has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent"
         >
           <input
             type="radio"
