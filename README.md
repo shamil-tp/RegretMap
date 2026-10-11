@@ -1,682 +1,315 @@
 # RegretMap
 
-**Every journey leaves a lesson.**
+**Travel smarter. Regret less.**
 
-RegretMap is a community-powered map of travel experiences. Travellers share what
-happened on a trip, the mistakes they made, what they learned, and practical advice
-for the next person. Others can search a destination, explore where stories happened
-on a map, read the original experiences, and see a short "Before you go" summary
-built from those stories.
+RegretMap is a community map of travel lessons. Travellers share what happened on a
+trip — the mistakes, the surprises, and what they'd do differently — so the next
+person doesn't repeat them. Visitors search a destination, explore where stories
+happened on a map, read the original experiences, discuss them, and get a short
+"Before you go" summary and a question-answering chat grounded **only** in those
+stories.
 
 RegretMap is about **destinations, places, journeys, activities and travel
 conditions** — not a hotel, room or restaurant rating site.
 
-> **Current status: development preview (Phase 10 of 11).**
-> Destinations and stories are read from Supabase (PostgreSQL) with Row Level
-> Security, and travellers can submit stories, which are **published immediately**
-> (moderators can still reject or hide them). The current public content is a
-> **clearly labelled demo seed** written for development. New submissions get an
-> AI moderation check (Gemini) that only labels the human review queue — it never
-> publishes or rejects anything; moderators publish from `/moderate`. Accounts
-> (Supabase Auth, email + password) unlock "Helpful" and a list of your own
-> submissions. See the [roadmap](#roadmap).
+**Live site:** <https://regret-map.shamiltp.me>
 
 ---
 
 ## Contents
 
 - [Features](#features)
+- [Content](#content)
+- [How the AI stays honest](#how-the-ai-stays-honest)
 - [Tech stack](#tech-stack)
 - [Getting started](#getting-started)
 - [Environment variables](#environment-variables)
+- [Database setup (Supabase)](#database-setup-supabase)
 - [Scripts](#scripts)
 - [Project structure](#project-structure)
-- [How it works](#how-it-works)
-- [Database (Supabase)](#database-supabase)
-- [Demo data](#demo-data)
-- [Maps, place search and usage policies](#maps-place-search-and-usage-policies)
-- [Design principles](#design-principles)
-- [Trust, safety and privacy principles](#trust-safety-and-privacy-principles)
-- [CI and releases](#ci-and-releases)
-- [Roadmap](#roadmap)
+- [Security and privacy](#security-and-privacy)
+- [Design](#design)
+- [Maps, search and photo credits](#maps-search-and-photo-credits)
+- [Testing, CI and releases](#testing-ci-and-releases)
+- [Known limitations](#known-limitations)
 - [Contributing](#contributing)
 
 ---
 
 ## Features
 
-### Explore page (`/`)
+### Home (`/`)
 
-- **Destination search with autocomplete.**
-  - Destinations that have stories appear first, with their story count, and open
-    the destination page.
-  - Other real places (cities, towns, beaches, peaks, passes, landmarks) come from
-    [Photon](https://photon.komoot.io) and are clearly marked
-    **"Other places — no stories yet"**. Choosing one explains honestly that no
-    stories exist for it yet.
-  - Keyboard support: ↑/↓ to move, Enter to choose, Esc to close; screen-reader
-    combobox semantics; clear button; loading and empty states.
-- **Interactive map** (Leaflet + OpenStreetMap) with a pin for every story.
-  Clicking a pin shows a popup with a link to the story.
-- **Story-concentration heatmap** with a **Pins / Heatmap / Both** switch and a
-  legend ("Fewer stories → More stories"). Warmer areas mean more published
-  stories — never more danger. See [Heatmap](#heatmap).
-- **Location picker:** click anywhere on the map to see its coordinates (for the
-  future story form; nothing is saved).
-- **Story feed** with category filters, travel-time filter, sorting and reset.
-  The map pins and heatmap always show the same filtered stories as the feed.
-- **"Show on map"** on each story highlights its pin and opens its popup.
-- List of destinations with their demo story counts.
+- **Destination search** with autocomplete: RegretMap destinations first, then any
+  town worldwide (Photon / OpenStreetMap). Picking a place without stories suggests
+  the nearest destination that has some, or invites you to share the first story.
+- **Photo postcards** of real destinations (freely licensed, credited).
+- **Map explorer** below the hero: every story as a pin, an optional story-density
+  heatmap, a **country filter** (`/?country=Japan`), category / season / sort filters,
+  and a feed that loads **10 stories at a time** ("Show more").
+- No AI runs on the home page — AI only starts once a destination is chosen.
 
 ### Destination page (`/destinations/[slug]`)
 
-- Destination name, region, country, short description, number of stories and the
-  months travellers visited.
-- **Before you go:**
-  - An **AI summary** (Gemini) of the destination's published stories: a short
-    overview and 3–5 practical tips, each linked to the stories it's based on, with
-    "One traveller reported this" / "Based on N stories" labels. Clearly marked as an
-    AI summary of personal experiences, not verified facts. See
-    [AI "Before you go" summaries](#ai-before-you-go-summaries).
-  - **In travellers' own words:** lessons quoted directly from stories, grouped by
-    topic, with evidence and season labels. Always shown, so the page stays useful
-    if the AI summary is unavailable.
-- Map fitted to the destination's story locations, plus the filterable story feed.
-- **Ask about {destination}:** a chat that answers questions using only that
-  destination's published stories, with "Based on these stories" links under each
-  answer. See [Destination chat](#destination-chat).
+- **Before you go** — lessons quoted from the stories, plus an AI summary where every
+  tip links to the stories it came from.
+- The destination's stories on a map and in a filterable feed, each with a reply count.
+- **Ask travellers** — a chat that answers only from this destination's published
+  stories. It loads only when opened.
 
 ### Story page (`/stories/[id]`)
 
-- Full story: what happened, what went wrong, what they'd do differently, and advice
-  for future travellers.
-- Category, travel month/year, place, and a (sample) published date.
-- Small map showing where it happened, and more stories from the same destination.
-- **Helpful:** signed-in users can mark a story helpful (and undo it); the count is
-  stored and shown to everyone. Visitors get a sign-in prompt. "Report" is still a
-  placeholder.
+- The full story: what happened, what went wrong, the lesson and advice.
+- **Regret reactions**: 👍 Helpful, 😬 Yikes, 🙋 Been there, 💡 Good tip.
+- **Threaded discussion** (Reddit-style): reply to any comment up to six levels deep,
+  collapse threads, and edit or delete your own comments.
 
 ### Share an experience (`/submit`)
 
-- Reached from the header, the mobile menu, and the "Share your experience" section
-  (destination pages preselect their destination with `/submit?destination=<slug>`).
-- **Destination or place** (required): type to search — RegretMap destinations
-  and real places (Photon) appear after a short pause; choose one with the mouse or
-  keyboard. Changing the text clears the choice. A real place within 50 km of a
-  RegretMap destination is filed under it (with the place's pin); otherwise it's
-  **added as a new destination**, published together with the story.
-- Other fields: title, what happened, what went wrong, what you learned and advice
-  (all required, with character counts), category, optional specific place, travel
-  month/year and an optional **map pin**, plus a required "this is my own
-  experience" confirmation.
-- Validation runs in the browser for quick feedback and again on the server, with an
-  error summary that links to each field.
-- The submit button is disabled while sending; a one-time submission key makes
-  double-clicks and retries harmless.
-- On success: "submitted for review — it isn't public yet". On failure (validation,
-  rate limit, database or network) an honest message is shown and the text is kept.
-- **Anyone can submit.** If you're signed in, the story is linked to your account
-  privately so you can follow its status on `/account`; stories are always shown
-  anonymously.
+- A validated form with place autocomplete or map picking, category, travel month,
+  lesson and advice. Stories are **published immediately**; an AI check only labels
+  them for moderators, it never publishes or rejects anything.
 
-### General
+### Accounts and moderation
 
-- Light theme, responsive from phones to desktop, visible keyboard focus, skip link.
-- Loading, empty, error and not-found states.
-- The map degrades gracefully: loading state, tile-error notice, and an error panel
-  that keeps the rest of the page usable if the map fails.
+- Email + password accounts (Supabase Auth) for reactions, comments and a list of your
+  own submissions on `/account`.
+- Moderators (listed in `MODERATOR_EMAILS`) see submissions awaiting review, with their
+  AI labels, on `/moderate`. A published story is hidden with
+  `update public.stories set status = 'hidden' where id = '…';`.
+
+---
+
+## Content
+
+| Set | What it contains |
+| --- | --- |
+| Community stories | Personal accounts submitted through the site. |
+| India travel notes | 201 notes across all 28 states and 8 Union Territories. |
+| World travel notes | 128 notes for 75 destinations in 52 countries on every inhabited continent. |
+
+Travel notes are practical guidance written by the RegretMap team. They are stored
+with `source = 'editorial'` and always shown as **"Travel note"**, never as a
+personal experience. The AI is told the same, and counts them separately from
+traveller stories.
+
+---
+
+## How the AI stays honest
+
+All AI runs on the server with Google Gemini. The site keeps working without it.
+
+- **Grounded in stories only.** The summary and chat see only published stories for
+  the current destination, delimited as untrusted data; instructions inside stories
+  are ignored.
+- **Checked sources.** The model cites stories by short references; the server maps
+  them back and rejects any reference it didn't send or that belongs to another
+  destination.
+- **No invented specifics.** Any number (price, time, distance, temperature) must
+  appear in the cited stories, otherwise the tip or answer is rejected.
+- **No uncited answers.** A chat answer that cites no story is replaced by a fixed
+  "the stories don't cover that yet" reply, so general knowledge can't slip in.
+- **Trip-planning questions** ("I want to go to Dubai, give me full guidelines")
+  get a fixed note that answers come only from travellers' stories and regrets, plus a
+  referral to **The Visa Guy** for full plans, visas or bookings. This wording is
+  written by the server, not the model.
+- **Failures are honest.** If Gemini is unavailable, the summary says it will appear
+  later and the chat shows the stories most related to the question.
+- **Reliability.** A pool of API keys (`GEMINI_API_KEY`, `GEMINI_API_KEY2`, …; up to
+  ten tried per request) is used round-robin. Rate limits, overloads and timeouts move
+  to the next key, with an optional `GEMINI_FALLBACK_MODEL`. Summaries are cached in
+  the database and invalidated when the underlying stories change.
+
+---
 
 ## Tech stack
 
-| Area | Technology |
-|---|---|
-| Framework | [Next.js 16](https://nextjs.org) (App Router, Turbopack, Cache Components) |
-| UI | React 19, TypeScript (strict), Tailwind CSS v4, [Lucide](https://lucide.dev) icons |
-| Map | [Leaflet](https://leafletjs.com) 1.9 + [React Leaflet](https://react-leaflet.js.org) 5, OpenStreetMap tiles |
-| Place search | [Photon](https://photon.komoot.io) (OpenStreetMap-based geocoder), via a server route |
-| Database | [Supabase](https://supabase.com) PostgreSQL with Row Level Security, `@supabase/supabase-js` (server-side only) |
-| Testing | [Vitest](https://vitest.dev) (unit tests with a mocked Supabase client) |
-| Linting | ESLint 9 with `eslint-config-next` |
-| CI/CD | GitHub Actions (CI checks + tag-based GitHub Releases) |
-| AI | Gemini (`GEMINI_MODEL`, currently `gemini-3.1-flash-lite`) via the REST API, server-side only, with a rotating key pool — moderation labels and "Before you go" summaries |
-| Planned | Supabase Auth |
+- **Next.js 16** (App Router, Cache Components) · **React 19** · **TypeScript** (strict)
+- **Tailwind CSS 4** · Space Grotesk / IBM Plex Sans / JetBrains Mono via `next/font`
+- **Supabase**: PostgreSQL with Row Level Security, Auth
+- **Leaflet** + React Leaflet + leaflet.heat, OpenStreetMap tiles
+- **Google Gemini** (server-side REST)
+- **zod**, **lucide-react**, **Vitest**
+
+---
 
 ## Getting started
 
-### Requirements
-
-- **Node.js 24** (Next.js 16 needs ≥ 20.9; CI uses Node 24)
-- **npm 11.19 or newer** — CI uses the npm bundled with Node 24. Older npm versions
-  (e.g. 11.6) write a lockfile that newer npm rejects in `npm ci`. Update with
-  `npm install -g npm@11.19.0`.
-
-### Install and run
+Requirements: **Node.js 24** and **npm 11.19+** (older npm writes a lockfile that CI's
+`npm ci` rejects; update with `npm install -g npm@11.19.0`).
 
 ```bash
 git clone https://github.com/shamil-tp/RegretMap.git
 cd RegretMap
 npm install
-cp .env.example .env.local   # then fill in the Supabase URL and publishable key
+cp .env.example .env.local   # fill in the values below
 npm run dev
 ```
 
-Open <http://localhost:3000>. Before stories appear, set up the database once —
-see [Database (Supabase)](#database-supabase). Without it, pages still load and
-show a friendly "Stories can't be loaded right now" message.
+Open <http://localhost:3000>. Set up the database once (below) for stories to appear;
+without it, pages still load and show a friendly "can't load stories" message.
 
-> Only one `next dev` server can run per project folder. If another one is already
-> running, Next.js prints its URL and PID instead of starting a second server.
+---
 
 ## Environment variables
 
-Copy `.env.example` to `.env.local` (which is git-ignored). Only the two Supabase
-variables are needed to load stories; everything else is optional or for later
-phases.
+Copy `.env.example` to `.env.local`. Never commit real values.
 
-| Variable | Exposed to browser | Used now | Purpose |
-|---|---|---|---|
-| `NEXT_PUBLIC_MAP_TILE_URL` | Yes | Yes (optional) | Custom tile URL template. Must be `https://` and contain `{z}`, `{x}`, `{y}`; otherwise the OpenStreetMap default is used. |
-| `PHOTON_API_URL` | No | Yes (optional) | Self-hosted Photon endpoint (https). Empty uses the public `https://photon.komoot.io/api/`. |
-| `NEXT_PUBLIC_SUPABASE_URL` | Yes | **Yes (required)** | Supabase project URL (Dashboard → Project Settings → Data API). |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | **Yes (required)** | Publishable key (`sb_publishable_…`). Used on the server for public reads; RLS applies. |
-| `SUPABASE_SECRET_KEY` | **No — server only** | **Yes (for submissions)** | Secret (`sb_secret_…`) or legacy `service_role` key. Used only by the server to insert submitted stories (published immediately). Never expose it. |
-| `GEMINI_API_KEY` | **No — server only** | Yes (AI) | Primary Gemini API key ([Google AI Studio](https://aistudio.google.com/apikey)). Without it, stories are still saved ("unmoderated") and pages show quoted lessons instead of an AI summary. |
-| `GEMINI_API_KEY2`, `GEMINI_API_KEY3`, … | **No — server only** | Optional | Extra keys for rotation (`GEMINI_API_KEY_2` style also works). Empty ones are ignored. |
-| `GEMINI_MODEL` | No | Yes (AI) | Gemini model id, e.g. `gemini-3.1-flash-lite`. |
-| `MODERATOR_EMAILS` | **No — server only** | For `/moderate` | Comma-separated emails allowed to publish/reject pending stories (must sign in with a confirmed email). |
+| Variable | Where | Purpose |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | public | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | public | Publishable key (RLS always applies) |
+| `SUPABASE_SECRET_KEY` | **server only** | Trusted server writes (submissions, AI cache) |
+| `GEMINI_API_KEY`, `GEMINI_API_KEY2`, … | **server only** | Gemini key pool |
+| `GEMINI_MODEL` | server only | e.g. `gemini-3.1-flash-lite` |
+| `GEMINI_FALLBACK_MODEL` | server only, optional | Second model used only when the main one is failing |
+| `MODERATOR_EMAILS` | server only | Comma-separated moderator emails |
+| `SITE_URL` | server only | Public URL used in sign-up confirmation emails |
+| `PHOTON_API_URL` | server only, optional | Self-hosted Photon instance |
+| `NEXT_PUBLIC_MAP_TILE_URL` | public, optional | Custom map tile provider |
 
-Rules: never put secret keys in `NEXT_PUBLIC_*` variables, client components, logs
-or committed files.
+Secrets never use a `NEXT_PUBLIC_` prefix, and a test fails if a client component
+imports server-only modules.
+
+---
+
+## Database setup (Supabase)
+
+Run these in the Supabase **SQL Editor**, in order. Every script is safe to re-run.
+If the editor asks about RLS when a script creates a table, choose **Run without RLS**
+— each script enables RLS itself.
+
+1. Migrations, in filename order, from `supabase/migrations/`:
+   1. `20261011120000_create_destinations_and_stories.sql`
+   2. `20261011120100_public_read_rls.sql`
+   3. `20261011130000_story_submission_key.sql`
+   4. `20261011140000_story_moderation.sql`
+   5. `20261011150000_destination_recommendations.sql`
+   6. `20261011160000_auth_authors_reactions.sql`
+   7. `20261011170000_story_source.sql`
+   8. `20261012100000_story_comments.sql`
+   9. `20261012120000_regret_emoji_reactions.sql`
+2. Content: `supabase/seed_india_editorial.sql`, then `supabase/seed_world_editorial.sql`.
+3. Checks (read-only, or rolled back): `supabase/tests/rls_check.sql`,
+   `comments_rls_check.sql`, `india_seed_check.sql`, `world_seed_check.sql`.
+
+`supabase/setup_all.sql` bundles the migrations plus a small legacy demo seed;
+`supabase/retire_demo_seed.sql` hides those demo stories if they were loaded.
+
+In **Authentication → URL Configuration**, set the Site URL to your deployment and add
+`<site>/auth/callback` (and `http://localhost:3000/auth/callback` for local work) to
+the redirect URLs.
+
+---
 
 ## Scripts
 
 | Command | What it does |
-|---|---|
-| `npm run dev` | Start the development server |
-| `npm run build` | Production build |
-| `npm run start` | Serve the production build |
+| --- | --- |
+| `npm run dev` | Development server |
+| `npm run build` / `npm start` | Production build / serve it |
 | `npm run lint` | ESLint |
-| `npm test` | Vitest unit tests (no network, no real credentials) |
-| `npx next typegen && npx tsc --noEmit` | Type-check (`typegen` creates Next.js route types first) |
+| `npx tsc --noEmit` | Type-check (run `npx next typegen` first on a fresh clone) |
+| `npm test` | Vitest (Gemini is always mocked; no API quota used) |
+| `npm run seed:india` / `npm run seed:world` | Validate the travel-note data and regenerate the seed SQL |
+| `node scripts/fetch-destination-images.mjs --missing` | Find credited photos for new destinations |
+
+---
 
 ## Project structure
 
-```text
+```
 src/
-├── app/
-│   ├── page.tsx                      Explore page
-│   ├── destinations/[slug]/page.tsx  Destination page
-│   ├── stories/[id]/page.tsx         Story page
-│   ├── submit/page.tsx               Share-an-experience page
-│   ├── submit/actions.ts             Server Action: validate, rate-limit, submit
-│   ├── api/places/autocomplete/      Place search route (Photon proxy)
-│   ├── layout.tsx                    Root layout, fonts, header/footer
-│   ├── globals.css                   Design tokens + Leaflet styling
-│   ├── loading.tsx · error.tsx · not-found.tsx
-├── components/
-│   ├── destination-search.tsx        Autocomplete combobox
-│   ├── story-explorer.tsx            Map + filters + feed, kept in sync
-│   ├── story-filters.tsx             Category / travel-time / sort controls
-│   ├── story-card.tsx                Story preview card
-│   ├── before-you-go.tsx             Lessons grouped by topic
-│   ├── story-actions.tsx             Helpful + Report (placeholder) on story pages
-│   ├── helpful-button.tsx            Helpful toggle (optimistic, rolled back on failure)
-│   ├── submit/location-picker.tsx    Destination/place autocomplete for the form
-│   ├── moderation-item.tsx           One pending story with Publish / Reject
-│   ├── auth/auth-form.tsx            Sign-in / sign-up form
-│   ├── share-callout.tsx             "Share your experience" section
-│   ├── submit/story-form.tsx         Submission form (validation, map pin, states)
-│   ├── submit/submit-flow.tsx        Fresh form + one-time key per submission
-│   ├── data-states.tsx               Unavailable / empty / loading states
-│   ├── map/explore-map.tsx           Client-only map loader + error boundary
-│   ├── map/story-map.tsx             Leaflet map (pins, popups, focus, picker)
-│   ├── map/heat-layer.tsx            Story-density heat layer (leaflet.heat)
-│   ├── map/map-layer-controls.tsx    Pins / Heatmap / Both switch + legend
-│   ├── site-header.tsx · mobile-nav.tsx · site-footer.tsx · wordmark.tsx
-│   └── ui/                           Button styles, Badge, StateMessage
-├── lib/
-│   ├── stories.ts                    Domain types (Destination, TravelStory, …) and formatters
-│   ├── data.ts                       Data-access functions (only DB reader; server-only)
-│   ├── mappers.ts                    Selected columns, row types, row → domain mapping
-│   ├── supabase/server.ts            Server-only Supabase client (publishable key)
-│   ├── supabase/admin.ts             Server-only privileged client (submissions only)
-│   ├── story-submission.ts           Submission schema (zod), shared by form + server
-│   ├── submissions.ts                Trusted submit: destination check, published insert
-│   ├── rate-limit.ts                 In-memory rate limiter
-│   ├── moderation/policy.ts          Moderation policy, output schema, local signals
-│   ├── moderation/gemini.ts          Server-only Gemini call (REST, JSON output)
-│   ├── moderation/service.ts         Runs moderation, saves results, retries
-│   ├── ai/gemini-client.ts           The one Gemini client: key pool, rotation, errors
-│   ├── recommendations/evidence.ts   Evidence selection, prompt payload, output validation
-│   ├── recommendations/service.ts    Summaries + caching (memory and private table)
-│   ├── chat/evidence.ts              Question-aware story ranking, answer validation
-│   ├── chat/service.ts               Destination chat: evidence, Gemini call, answer cache
-│   ├── story-filtering.ts            Pure filter/sort used by the feed
-│   ├── before-you-go.ts              Groups story lessons by topic
-│   ├── map.ts                        Tile config, MapPoint type, story → map point
-│   ├── heatmap.ts                    Heat points, weights and heatmap settings
-│   ├── place-search.ts               Place-search types and client helper
-│   └── *.test.ts                     Unit tests
-└── test/                             Test fixtures and stubs
+  app/                    routes: home, destinations, stories, submit, auth, account, moderate
+  components/             UI (map, explorer, story cards, comments, chat, forms)
+  lib/
+    ai/                   Gemini client (key pool) and grounding checks
+    chat/                 destination chat: retrieval, validation, trip-planning notes
+    recommendations/      "Before you go" AI summaries and caching
+    moderation/           AI moderation labels (annotate only)
+    data.ts               the only place the app reads stories and destinations
+  data/                   destination photo credits (generated, reviewed)
+  design/                 design reference (neo-brutalist spec and static mock-up)
 supabase/
-├── migrations/                       Versioned SQL migrations (schema + RLS)
-├── seed.sql                          DEMO seed data (is_demo = true)
-└── tests/rls_check.sql               Non-destructive RLS policy check
+  migrations/             versioned schema + RLS
+  seed/india, seed/world  travel-note source data and SQL generators
+  tests/                  SQL checks for RLS and seeds
+scripts/                  maintenance scripts
 ```
 
-## How it works
-
-### Data flow
-
-```text
-Supabase (RLS) ──► lib/supabase/server.ts ──► lib/data.ts ──► Server Components (pages)
-                                                            └─► Client Components get only the props they need
-```
-
-- `src/lib/data.ts` is the only module that queries the database. It is
-  `server-only`, filters on `status = 'published'` explicitly (in addition to RLS),
-  selects only the columns the UI needs, bounds result sizes, and deduplicates
-  repeated calls within a request with React `cache`.
-- Database errors are logged on the server and reach users only as a generic
-  "Stories can't be loaded right now" state — never raw error text. There is **no
-  silent fallback** to fictional data.
-
-Main types (`src/lib/stories.ts`): `Destination`, `TravelStory`, `StoryCategory`,
-`Coordinates`, and `StoryWithDestination`.
-
-Story categories: transport, planning, weather, packing, activity, accessibility,
-safety, costs, local customs, other.
-
-### Rendering
-
-- Pages are React Server Components with Cache Components (Partial Prerendering):
-  a static shell is prerendered, and database-backed sections stream in at request
-  time inside `<Suspense>` boundaries with skeleton loading states. The database is
-  never queried at build time, so builds (including CI) need no credentials and new
-  stories appear without a rebuild. Unknown slugs/ids show the not-found page.
-- Interactive pieces (search, filters, map, mobile menu, story actions) are Client
-  Components.
-- The map is browser-only (`next/dynamic` with `ssr: false`). It creates the Leaflet
-  map in a single effect and removes it in that effect's cleanup, so React Strict
-  Mode and hidden/re-shown routes always get exactly one working map.
-- The map receives only the fields it needs (`MapPoint`: id, coordinates, title,
-  place, category, demo flag, link) — never full story bodies.
-
-### Heatmap
-
-The heatmap answers one question: **where have more RegretMap stories been
-shared?** It does not show danger, quality, popularity or risk, and the legend
-says so.
-
-- **Data:** exactly the stories the page already shows — published stories of
-  published destinations (query filter + RLS), after the active category and
-  travel-time filters. No extra database request, no pending or hidden stories.
-- **Coordinates:** a story's own `latitude`/`longitude` only. Stories without a
-  location (or with invalid values) are left off the map but stay in the feed;
-  the map notes how many aren't shown. There is no fallback to the destination's
-  coordinates, so no location is invented.
-- **Weighting:** every story counts once with the same weight (1). There is no
-  severity, sentiment or AI weighting.
-- **Scope:** the Explore map uses all published stories; a destination page uses
-  only that destination's stories; story pages show the single pin only.
-- **Settings** (`src/lib/heatmap.ts`): radius 26 px, blur 20 px, two overlapping
-  stories reach the strongest colour, warm peach→coral palette at 75% opacity so
-  the base map stays readable. `maxZoom` is set to the map's minimum zoom so the
-  plugin doesn't fade points when zoomed out.
-- **Library:** [`leaflet.heat`](https://github.com/Leaflet/Leaflet.heat) 0.2.0,
-  loaded in the browser only. It's a small, stable classic plugin that attaches to
-  the global `L`, which `heat-layer.tsx` sets up before loading it.
-- Heat reflects where people chose to write, so busy tourist areas naturally show
-  more — a known bias of any submission-based map.
-
-### Place search
-
-`GET /api/places/autocomplete?q=…` (server route) calls Photon and returns
-simplified suggestions. It:
-
-- Accepts 2–100 characters (shorter returns nothing, longer returns `400`).
-- Rate-limits each IP to 30 requests per minute, plus 300 per minute in total per
-  server instance (`429` with `Retry-After`).
-- Caches results for an hour and times out after 4 seconds.
-- Returns only destination-like features (places, natural features, historic sites,
-  mountain passes, attractions, viewpoints, museums, national parks, waterfalls) —
-  not hotels, restaurants or street addresses.
-- Never forwards provider error details to the browser.
-
-The rate limit and cache are in memory per server instance — fine for development
-and a single instance; a shared store is needed for a scaled deployment.
-
-> **Client IPs can be forged.** Per-IP limits read `X-Forwarded-For`, which is only
-> trustworthy behind a proxy you control that overwrites it (e.g. Vercel or your
-> load balancer). That's why every per-IP limit is paired with an IP-independent
-> total limit.
-
-## Database (Supabase)
-
-### Schema
-
-| Table | Purpose | Key columns |
-|---|---|---|
-| `destinations` | Places travellers write about | `slug` (unique, URL-safe), `name`, `region`, `country`, `description`, `latitude`/`longitude`, `status` (`draft` / `published` / `hidden`), `is_demo`, timestamps |
-| `stories` | Personal travel experiences | `destination_id` → `destinations.id` (**on delete restrict** — no orphans), `title`, `body`, `category`, `place_name`, coordinates, `travel_month`/`travel_year`, `challenge`, `lesson`, `advice`, `status` (`pending` / `published` / `hidden` / `rejected`), `published_at`, `is_demo`, timestamps |
-
-Constraints enforce length limits, valid categories and months, coordinate ranges,
-both-or-neither coordinates, and a `published_at` date for published stories.
-Partial indexes cover published stories per destination and globally, newest first.
-`updated_at` is maintained by a trigger.
-
-### Row Level Security
-
-- `anon` and `authenticated` can **only SELECT** published destinations, and
-  published stories whose destination is also published.
-- There are **no insert/update/delete policies**, and write privileges are revoked,
-  so browsers cannot create, publish or modify content.
-- The app never uses a secret/service-role key for these reads.
-
-### How submissions are stored
-
-Submissions (anonymous or signed in) go through a trusted server path instead of a
-public insert policy:
-
-1. The form posts to a Next.js **Server Action** (`src/app/submit/actions.ts`).
-   Next.js checks the request origin; only known text fields are read.
-2. The payload is validated with the shared zod schema (`src/lib/story-submission.ts`).
-   Unknown fields, such as a forged `status`, are ignored or rejected.
-3. Rate limits: 5 accepted submissions per IP per 10 minutes and 30 in total per
-   server instance (both in memory), plus a hidden honeypot field for bots.
-4. `src/lib/submissions.ts` checks the destination is published (through the
-   public, RLS-enforced client), checks any map pin is within 200 km of it, and
-   catches the same story being sent twice. It also counts new (non-demo) stories created
-   in the last hour **in the database** and refuses new ones above 60 — a shared
-   cap that works across server instances and can't be bypassed with forged IP
-   headers. If that count can't be read, nothing is written (fails closed).
-5. The row is inserted with the server-only secret key, always with
-   `status = 'published'`, `published_at = now()`, `is_demo = false` and the form's
-   one-time `submission_key` (unique, so repeats can't create a second story).
-
-Pending, hidden or rejected stories never appear in feeds, maps or story pages. Database errors are
-logged on the server by code only — never with story text.
-
-### Gemini key pool and rotation
-
-All AI calls go through one server-only client (`src/lib/ai/gemini-client.ts`):
-
-- Keys: `GEMINI_API_KEY` (primary), then `GEMINI_API_KEY2`, `GEMINI_API_KEY3`, …
-  in number order. Empty values and duplicates are ignored.
-- The primary key is tried first, and **each key at most once per request** (max 3
-  attempts).
-- **429 rate limit** → that key rests for the provider's `Retry-After` /
-  `retryDelay` (default 60 s, between 5 s and 10 min), and the next key is tried.
-- **Temporary 5xx** → the key rests 15 s, next key.
-- **Invalid or forbidden key** (401/403, `API_KEY_INVALID`) → the key rests 10 min,
-  next key.
-- **Malformed request, timeout or network error** → stop; another key wouldn't help.
-- If every key is resting, the request fails immediately without calling Gemini.
-- Rotation does **not** bypass a quota shared by keys from the same Google Cloud
-  project, and it doesn't guarantee availability. Rest periods are kept in memory
-  per server instance (not shared between instances).
-- Keys are sent only in a request header — never in URLs, logs, errors or responses.
-
-### AI "Before you go" summaries
-
-On a destination page, the server summarises that destination's **published**
-stories (from the RLS-enforced data layer — the browser can't supply evidence):
-
-1. **Evidence:** real stories are preferred; demo stories are used only if there
-   are fewer than 2 real ones, and the summary is then labelled "Generated from demo
-   example stories". At most 12 stories, newest first, with long fields trimmed.
-   Fewer than 2 stories → an honest "not enough stories yet" note (no AI call).
-2. **Prompt:** stories are sent as delimited data with short references (`S1`, `S2`…);
-   the model is told to use only them, cite refs for every tip, never invent facts
-   or numbers, flag disagreements, never rate the destination, and ignore any
-   instructions inside stories.
-3. **Validation:** the JSON answer is checked against a strict schema (1–5 tips,
-   allowed categories, length limits, no links). Every ref must be one the server
-   sent for this destination — **one fabricated citation rejects the whole answer**.
-   Evidence counts are computed by the server, not the model.
-4. **Caching:** results are keyed by a hash of the evidence set + model + prompt
-   version, kept in memory and in the private `destination_recommendations` table
-   for 7 days. New or changed published stories produce a new hash, so a fresh
-   summary is generated; cached rows are re-checked against the current eligible
-   stories before use. Concurrent page views share one generation; after a failure
-   the destination waits 5 minutes before trying again.
-5. **Fallback:** if Gemini is unavailable or the answer is invalid, the page shows
-   the quoted lessons with a short note — nothing is invented.
-
-The summary streams in separately, so the rest of the page never waits for it.
-
-### Destination chat
-
-The "Ask about {destination}" panel (`src/components/destination-chat.tsx`) calls
-a Server Action (`src/app/destinations/[slug]/chat-action.ts`):
-
-1. **Validation:** slug format, question 2–500 characters (whitespace collapsed),
-   at most 20 history entries; unknown fields rejected. 10 questions per IP per
-   minute plus 60 per minute in total (in memory, per instance).
-2. **Evidence, on the server, every question:** the destination is resolved from
-   the slug and its **published** stories are loaded through the RLS-enforced data
-   layer. The browser never supplies evidence. Real stories are preferred over
-   demo ones (as for summaries). Stories are ranked by simple keyword/category
-   matching against the question and the top 8 are sent, trimmed — no embeddings.
-3. **Prompt:** stories, the last 4 conversation turns (clipped, context only — never
-   evidence) and the question are sent as delimited data; the model is told to use
-   only the stories, cite refs, say when evidence is missing or stories disagree,
-   suggest official sources for time-sensitive or safety matters, give no medical
-   or legal advice, never rate the destination, stay on this destination, and
-   ignore instructions inside any of that text. Answers are capped at ~150 words.
-4. **Validation:** strict JSON schema; every cited ref must be one the server sent
-   for this destination — one fabricated citation rejects the answer; links are
-   rejected; an answer citing nothing is never marked as sufficiently supported.
-   Source links are built from validated story ids only.
-5. **Cost controls:** the shared Gemini client and key pool (bounded rotation);
-   500 output tokens; identical questions (same evidence and history) are answered
-   once and cached for 10 minutes; concurrent duplicates share one call; the UI
-   blocks a second send while one is in flight.
-6. **Failures:** unknown destination, no stories, Gemini not configured, rate
-   limits/exhausted keys, timeouts, invalid output and database errors each show
-   an honest message (with "Try again" where it makes sense) — never an invented
-   answer.
-
-Conversations live only in the page; nothing is stored.
-
-### AI-assisted moderation (annotate only)
-
-After a new story is saved (and published), the server asks Gemini to classify it
-**after the response has been sent** (Next.js `after()`), so submitting stays
-fast. The AI result is stored in the private `story_moderation` table and only
-**labels the review queue** — it never changes `stories.status`. A human always
-publishes or rejects. Passing moderation does not mean a story is true.
-
-| Model decision | Meaning |
-|---|---|
-| `allow_review` | Ordinary travel story. Negative experiences, complaints, scam reports and strong language about a bad trip are normal. |
-| `flag_review` | Personal info, harassment, accusations against a named private person, links/promotion, harmful instructions, or unsure. |
-| `reject_recommended` | Clear spam/advertising, off-topic, abusive/threatening, or unusable text — a **recommendation** only. |
-
-Categories (allowlist): spam, promotional, off_topic, harassment, threat, hate,
-personal_info, suspicious_link, scam_attempt, dangerous_instructions, unusable.
-
-**Server policy → queue label:** `reject_recommended` → `reject_recommended`;
-`flag_review`, any category, confidence below 0.6, or a local signal →
-`needs_attention`; a confident `allow_review` → `clear`; failed → `unmoderated`.
-A deterministic local check (emails, phone numbers, links) adds `personal_info` /
-`suspicious_link` regardless of the model.
-
-**Safety:** one small request per story (temperature 0, minimal thinking, 300
-output tokens, 8 s timeout, JSON-schema output). The story is sent as delimited
-data and the model is told to ignore instructions inside it. The reply is treated
-as untrusted and validated against the allowlists — anything else counts as a
-failure. Timeouts, quota (429), provider errors and invalid output are stored as
-`failed` with an error class only (never story text or provider messages) and
-retried later (at most 3 attempts, at least 2 minutes apart, on later
-submissions). Retries update the same row, so they can't duplicate a story.
-
-### Accounts and sign-in
-
-- Supabase Auth email + password (`@supabase/ssr` cookie sessions; `src/proxy.ts`
-  refreshes sessions). Pages: `/auth/sign-in`, `/auth/sign-up` (confirmation email →
-  `/auth/callback`), `/account` (your submissions and their status, sign out).
-- The server identifies users with `auth.getUser()` (verified by Supabase), never
-  with an id from the browser. Post-sign-in redirects only allow same-site paths.
-- RLS: `story_authors` rows are readable only by their author; authors can read
-  their own stories in any status; `story_reactions` allows users to add/remove
-  only their own "helpful", only on published stories (one per user per story).
-  `stories.helpful_count` is maintained by a database trigger.
-
-**Supabase dashboard setup:** Authentication → URL Configuration → set **Site URL**
-(e.g. `http://localhost:3000`) and add `http://localhost:3000/auth/callback` (and
-your production URL's `/auth/callback`) to **Redirect URLs**. Email confirmation is
-on by default; the confirmation link must be opened in the same browser.
-
-### Moderating submissions
-
-Moderators — signed-in users with a confirmed email listed in `MODERATOR_EMAILS` —
-use **`/moderate`**: pending stories with their AI labels, most urgent first, with
-**Publish** (also publishes a proposed destination) and **Reject**. Every action
-re-checks moderator access on the server. You can also use the **SQL Editor**:
-
-```sql
--- Review queue: pending stories with AI labels, most urgent first
-select * from public.moderation_queue;
-
--- Publish one (makes it public)
-update public.stories set status = 'published', published_at = now()
-where id = '<story-id>' and status = 'pending';
-
--- Reject or hide one
-update public.stories set status = 'rejected' where id = '<story-id>';
-```
-
-Publishing means a moderator allowed it on the site — not that it was verified.
-When a story's status changes, `story_moderation.reviewed_status` and
-`reviewed_at` are recorded automatically. `story_moderation` and
-`moderation_queue` are not accessible to the public API.
-
-### Set up a Supabase project
-
-**Quickest:** paste `supabase/setup_all.sql` into **Supabase Dashboard → SQL Editor**
-and run it. It creates everything below and inserts the demo data in one
-transaction, and is safe to re-run. (It is generated from the migration and seed
-files — edit those, not `setup_all.sql`.)
-
-Or run the individual files in the SQL Editor (or `npx supabase db push` if you
-use the Supabase CLI), in order:
-
-1. `supabase/migrations/20261011120000_create_destinations_and_stories.sql`
-2. `supabase/migrations/20261011120100_public_read_rls.sql`
-3. `supabase/migrations/20261011130000_story_submission_key.sql`
-4. `supabase/migrations/20261011140000_story_moderation.sql`
-5. `supabase/migrations/20261011150000_destination_recommendations.sql`
-6. `supabase/migrations/20261011160000_auth_authors_reactions.sql`
-7. *(optional, development only)* `supabase/seed.sql` — labelled demo content
-8. `supabase/tests/rls_check.sql` — should finish with "All RLS checks passed";
-   it rolls back everything it creates.
-
-Migrations are additive (no drops or resets). Never run the seed automatically in
-production.
-
-## Demo data
-
-`supabase/seed.sql` inserts **5 demo destinations** (Manali, Munnar, Jaipur, Leh,
-Varkala) and **18 demo stories**, all with `is_demo = true`. It is safe to re-run
-(it never overwrites rows). Remove it later with:
-
-```sql
-delete from public.stories where is_demo;
-delete from public.destinations where is_demo;
-```
-
-- The UI labels demo records "Demo example", "Demo destination" or "Derived from
-  demo stories"; non-demo records are shown without these labels.
-- They are illustrative scenarios written for development — **not real people, real
-  submissions, or verified facts**. Published dates are labelled "Sample date".
-- Coordinates are approximate public locations chosen for map testing.
-- Story counts shown in the app are counts of demo stories, not community statistics.
-
-## Maps, place search and usage policies
-
-- **Leaflet** provides the interactive map (pan, zoom, markers, popups, events).
-- **OpenStreetMap** provides the map data and the default tiles
-  (`https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png`). No API key is needed.
-  Attribution is always visible on the map. The public tile service is not unlimited
-  production hosting — follow the
-  [OSM tile usage policy](https://operations.osmfoundation.org/policies/tiles/) and
-  configure `NEXT_PUBLIC_MAP_TILE_URL` for a dedicated provider before heavy use.
-- **Photon** provides place autocomplete from OpenStreetMap data. No key is needed;
-  the public instance is fair-use ("extensive usage will be throttled") with no
-  availability guarantee. Results show "Place search by Photon · © OpenStreetMap
-  contributors". Use `PHOTON_API_URL` for a self-hosted instance in production.
-- The public **Nominatim** service is not used: its policy forbids autocomplete.
-
-## Design principles
-
-- Light theme only: white and light-grey surfaces, charcoal text, coral-red accent.
-- Calm, editorial travel feel; the map and readable stories are the main elements.
-- No star ratings, popularity scores, AI mascots or decorative AI elements.
-- Story counts and map density mean "more submissions", never danger or quality.
-
-## Trust, safety and privacy principles
-
-These guide current and future phases (see `CLAUDE.md` for the full specification):
-
-- A story is a personal account, not a proven fact; the UI says so.
-- Guidance must link to the stories it comes from and show honest sample sizes.
-- AI (later phases) is a quiet helper for moderation flags and summaries — never a
-  truth oracle, and always grounded in retrieved stories.
-- Moderation status, author identity and counts are set by the server, never trusted
-  from the browser. Public queries expose only safe, published fields.
-- Secrets stay server-side; `.env.local` is git-ignored.
-
-## CI and releases
-
-GitHub Actions workflows live in `.github/workflows/`.
-
-**CI (`ci.yml`)** runs on pull requests to `main` and pushes to `main`:
-`npm ci` → lint → type-check → tests → production build, on Node 24 with npm caching
-and a read-only token. Superseded runs are cancelled. No secrets are needed.
-
-**Release (`release.yml`)** runs when a tag like `v1.2.3` is pushed:
-
-1. Validates the tag is strict `vMAJOR.MINOR.PATCH` (rejects `v1.0`, `1.0.0`,
-   `v1.0.0-beta.1`) and that the tagged commit is on `main`.
-2. Runs the same quality checks on the exact tagged commit.
-3. Creates a GitHub Release with auto-generated notes (fails safely if one exists).
+---
+
+## Security and privacy
+
+- **Row Level Security on every table.** The public can read only published stories
+  of published destinations, and visible comments on them. Clients cannot publish,
+  moderate, or change counts.
+- **Identity comes from the session.** Comments and reactions are written with the
+  user's own session; `user_id` defaults to `auth.uid()` and can't be supplied or read
+  by other users. Display names are set by the database.
+- **Secrets stay server-side**: the Supabase secret key and Gemini keys are never sent
+  to the browser, logged, or put in URLs.
+- **Validated input**: zod schemas, length limits, control and bidi characters
+  stripped, rate limits on submissions, comments, reactions and chat.
+- **Anonymous by default**: public pages never show emails or account ids.
+- User content is rendered as plain text (no HTML), so pasted markup can't run.
+
+---
+
+## Design
+
+Rounded neo-brutalism (spec in `src/design/design.md`): a raw-paper canvas with a dot
+grid, black ink borders, hard block shadows, caution-yellow calls to action, regret red
+and map blue. Buttons and cards lift on hover and press in on click. All motion is CSS
+(transform/opacity only) and turns off for visitors who prefer reduced motion.
+
+---
+
+## Maps, search and photo credits
+
+- Map tiles © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors,
+  with attribution shown on every map. The public tile server is for light use; set
+  `NEXT_PUBLIC_MAP_TILE_URL` to a provider for heavy traffic.
+- Place search uses [Photon](https://photon.komoot.io) (OpenStreetMap data), debounced
+  and called from the server.
+- Destination photos are the Wikipedia lead images, kept only when hosted on Wikimedia
+  Commons under CC0, public domain, CC BY or CC BY-SA. Each photo shows its author and
+  licence and links to its Commons page. Mismatched images are excluded by hand.
+
+---
+
+## Testing, CI and releases
+
+- About 300 unit and integration tests cover validation, RLS-dependent actions, AI
+  grounding and failure handling, key rotation, comments, reactions and seeds.
+- **CI** (`.github/workflows/ci.yml`) runs on pull requests and pushes to `main`:
+  `npm ci` → lint → type-check → tests → production build, on Node 24.
+- **Release** (`release.yml`) runs for tags like `v1.2.3`: it validates the tag, re-runs
+  the checks on the tagged commit and publishes a GitHub Release.
 
 ```bash
-git push origin main
-git tag -a v1.2.0 -m "RegretMap v1.2.0"
-git push origin v1.2.0
+git tag -a v1.0.0 -m "RegretMap v1.0.0"
+git push origin v1.0.0
 ```
 
-## Roadmap
+---
 
-Development follows the phases in [`CLAUDE.md`](CLAUDE.md):
+## Known limitations
 
-| Phase | Scope | Status |
-|---|---|---|
-| 0 | Repository audit and setup | ✅ Done |
-| 1 | Frontend foundation and design system | ✅ Done |
-| 2 | Interactive map (Leaflet + OpenStreetMap) | ✅ Done |
-| 3 | Destination and story UI, search, filters (demo data) | ✅ Done |
-| 4 | Supabase schema, RLS and data access | ✅ Done |
-| 5 | Story submission with server-side validation, pending review | ✅ Done (reactions/reports not yet) |
-| 6 | Story-concentration heatmap, pins/heatmap switch, filter-aware | ✅ Done (no clustering yet) |
-| 7 | AI-assisted moderation (Gemini, annotate only) | ✅ Done |
-| 8 | AI "Before you go" summaries with source links, caching and key rotation | ✅ Done |
-| 9 | Destination-scoped AI chat with validated story citations | ✅ Done |
-| 10 | Accounts, helpful reactions, moderator page, location autocomplete in the form | ✅ Done |
-| 11 | Quality, accessibility and launch readiness | Planned |
+- **Report** is a placeholder, and there's no "Hide" button for published stories yet
+  (moderators hide them with SQL, see above).
+- No password reset or account deletion yet.
+- Rate limits are in memory per server instance (the database-backed submission cap is
+  shared).
+- Community stories are personal accounts, not verified facts; travel notes may go out
+  of date. Always check official sources for permits, weather, safety and transport.
 
-Known gaps in the current version: "Report" is still a placeholder, no password
-reset or account deletion yet, the submission form needs JavaScript, per-IP
-rate limits and duplicate-content detection are in memory per server instance (the
-database-backed hourly cap is shared), no pagination (lists are capped at 100–200 stories), not-found
-pages for missing destinations/stories return HTTP 200 because they stream after the
-page shell, and some landmark names don't match well in Photon (e.g. "Amer Fort").
+---
 
 ## Contributing
 
-1. Read [`CLAUDE.md`](CLAUDE.md) — it is the product spec and implementation contract.
-2. Branch from `main`, keep changes to one phase or fix, and open a pull request.
-3. Make sure `npm run lint`, the type-check and `npm run build` pass (CI runs them).
-4. Never commit secrets or present demo content as real community data.
+1. Read [`CLAUDE.md`](CLAUDE.md) (product rules) and [`HANDOFF.md`](HANDOFF.md)
+   (current state and notes).
+2. Branch from `main` and open a pull request; CI must pass.
+3. Never commit secrets, and never present travel notes or test content as real
+   community stories.
