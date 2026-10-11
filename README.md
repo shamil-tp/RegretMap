@@ -16,13 +16,6 @@ conditions** — not a hotel, room or restaurant rating site.
 
 ### Demo login
 
-To try reactions and comments without creating an account:
-
-- **Email:** `nihal.chiyoor@gmail.com`
-- **Password:** `Sinan@9292`
-
-This is a shared test account (no moderator access). Please don't change its password.
-
 ---
 
 ## Contents
@@ -42,7 +35,6 @@ This is a shared test account (no moderator access). Please don't change its pas
 - [Maps, search and photo credits](#maps-search-and-photo-credits)
 - [Testing, CI and releases](#testing-ci-and-releases)
 - [Known limitations](#known-limitations)
-- [Contributing](#contributing)
 
 ---
 
@@ -92,10 +84,10 @@ This is a shared test account (no moderator access). Please don't change its pas
 
 ## Content
 
-| Set | What it contains |
-| --- | --- |
-| Community stories | Personal accounts submitted through the site. |
-| India travel notes | 201 notes across all 28 states and 8 Union Territories. |
+| Set                | What it contains                                                            |
+| ------------------ | --------------------------------------------------------------------------- |
+| Community stories  | Personal accounts submitted through the site.                               |
+| India travel notes | 201 notes across all 28 states and 8 Union Territories.                     |
 | World travel notes | 128 notes for 75 destinations in 52 countries on every inhabited continent. |
 
 Travel notes are practical guidance written by the RegretMap team. They are stored
@@ -165,18 +157,18 @@ without it, pages still load and show a friendly "can't load stories" message.
 
 Copy `.env.example` to `.env.local`. Never commit real values.
 
-| Variable | Where | Purpose |
-| --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | public | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | public | Publishable key (RLS always applies) |
-| `SUPABASE_SECRET_KEY` | **server only** | Trusted server writes (submissions, AI cache) |
-| `GEMINI_API_KEY`, `GEMINI_API_KEY2`, … | **server only** | Gemini key pool |
-| `GEMINI_MODEL` | server only | e.g. `gemini-3.1-flash-lite` |
-| `GEMINI_FALLBACK_MODEL` | server only, optional | Second model used only when the main one is failing |
-| `MODERATOR_EMAILS` | server only | Comma-separated moderator emails |
-| `SITE_URL` | server only | Public URL used in sign-up confirmation emails |
-| `PHOTON_API_URL` | server only, optional | Self-hosted Photon instance |
-| `NEXT_PUBLIC_MAP_TILE_URL` | public, optional | Custom map tile provider |
+| Variable                               | Where                 | Purpose                                             |
+| -------------------------------------- | --------------------- | --------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`             | public                | Supabase project URL                                |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | public                | Publishable key (RLS always applies)                |
+| `SUPABASE_SECRET_KEY`                  | **server only**       | Trusted server writes (submissions, AI cache)       |
+| `GEMINI_API_KEY`, `GEMINI_API_KEY2`, … | **server only**       | Gemini key pool                                     |
+| `GEMINI_MODEL`                         | server only           | e.g. `gemini-3.1-flash-lite`                        |
+| `GEMINI_FALLBACK_MODEL`                | server only, optional | Second model used only when the main one is failing |
+| `MODERATOR_EMAILS`                     | server only           | Comma-separated moderator emails                    |
+| `SITE_URL`                             | server only           | Public URL used in sign-up confirmation emails      |
+| `PHOTON_API_URL`                       | server only, optional | Self-hosted Photon instance                         |
+| `NEXT_PUBLIC_MAP_TILE_URL`             | public, optional      | Custom map tile provider                            |
 
 Secrets never use a `NEXT_PUBLIC_` prefix, and a test fails if a client component
 imports server-only modules.
@@ -190,15 +182,15 @@ If the editor asks about RLS when a script creates a table, choose **Run without
 — each script enables RLS itself.
 
 1. Migrations, in filename order, from `supabase/migrations/`:
-   1. `20261011120000_create_destinations_and_stories.sql`
-   2. `20261011120100_public_read_rls.sql`
-   3. `20261011130000_story_submission_key.sql`
-   4. `20261011140000_story_moderation.sql`
-   5. `20261011150000_destination_recommendations.sql`
-   6. `20261011160000_auth_authors_reactions.sql`
-   7. `20261011170000_story_source.sql`
-   8. `20261012100000_story_comments.sql`
-   9. `20261012120000_regret_emoji_reactions.sql`
+    1. `20261011120000_create_destinations_and_stories.sql`
+    2. `20261011120100_public_read_rls.sql`
+    3. `20261011130000_story_submission_key.sql`
+    4. `20261011140000_story_moderation.sql`
+    5. `20261011150000_destination_recommendations.sql`
+    6. `20261011160000_auth_authors_reactions.sql`
+    7. `20261011170000_story_source.sql`
+    8. `20261012100000_story_comments.sql`
+    9. `20261012120000_regret_emoji_reactions.sql`
 2. Content: `supabase/seed_india_editorial.sql`, then `supabase/seed_world_editorial.sql`.
 3. Checks (read-only, or rolled back): `supabase/tests/rls_check.sql`,
    `comments_rls_check.sql`, `india_seed_check.sql`, `world_seed_check.sql`.
@@ -214,15 +206,15 @@ the redirect URLs.
 
 ## Scripts
 
-| Command | What it does |
-| --- | --- |
-| `npm run dev` | Development server |
-| `npm run build` / `npm start` | Production build / serve it |
-| `npm run lint` | ESLint |
-| `npx tsc --noEmit` | Type-check (run `npx next typegen` first on a fresh clone) |
-| `npm test` | Vitest (Gemini is always mocked; no API quota used) |
-| `npm run seed:india` / `npm run seed:world` | Validate the travel-note data and regenerate the seed SQL |
-| `node scripts/fetch-destination-images.mjs --missing` | Find credited photos for new destinations |
+| Command                                               | What it does                                               |
+| ----------------------------------------------------- | ---------------------------------------------------------- |
+| `npm run dev`                                         | Development server                                         |
+| `npm run build` / `npm start`                         | Production build / serve it                                |
+| `npm run lint`                                        | ESLint                                                     |
+| `npx tsc --noEmit`                                    | Type-check (run `npx next typegen` first on a fresh clone) |
+| `npm test`                                            | Vitest (Gemini is always mocked; no API quota used)        |
+| `npm run seed:india` / `npm run seed:world`           | Validate the travel-note data and regenerate the seed SQL  |
+| `node scripts/fetch-destination-images.mjs --missing` | Find credited photos for new destinations                  |
 
 ---
 
@@ -315,11 +307,3 @@ git push origin v1.0.0
   of date. Always check official sources for permits, weather, safety and transport.
 
 ---
-
-## Contributing
-
-1. Read [`CLAUDE.md`](CLAUDE.md) (product rules) and [`HANDOFF.md`](HANDOFF.md)
-   (current state and notes).
-2. Branch from `main` and open a pull request; CI must pass.
-3. Never commit secrets, and never present travel notes or test content as real
-   community stories.
