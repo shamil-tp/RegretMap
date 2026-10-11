@@ -153,7 +153,11 @@ say "saved but isn't public yet"; now stories go live immediately.
 
 - Home = compact headline + search, then the map explorer (`src/components/explore-section.tsx`:
   country filter, map/heatmap, paged feed). `/explore` 308-redirects to `/` (next.config redirects).
-- Destination photos removed everywhere (components, data, fetch script, image config).
+- Destination photos removed from destination pages and cards. The home hero postcard collage
+  (`HeroCollage`, Kyoto/Machu Picchu/Hampi…) is back: hero on top, map explorer below (src/home.jpeg).
+  Santorini excluded (its Wikipedia image is a map).
+- Sticky side columns (explorer map column, story page aside) scroll independently on lg screens
+  (`lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain`).
 - Story cards show a reply count pill linking to `/stories/[id]#discussion` (`getCommentCounts`).
 
 ## 3. Owner must still do (remote, manual)

@@ -199,7 +199,7 @@ async function StoryContent({ params }: Pick<Props, "params">) {
           </section>
         </article>
 
-        <aside className="space-y-10 lg:sticky lg:top-24 lg:self-start">
+        <aside className="space-y-10 lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:pb-3 lg:pr-3">
           {point.length > 0 && (
             <section aria-labelledby="story-map-heading">
               <h2 id="story-map-heading" className="text-lg font-semibold text-ink">

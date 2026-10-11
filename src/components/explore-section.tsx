@@ -27,7 +27,7 @@ const FEATURED_DESTINATIONS = 10;
 /** Cards rendered on the server; more load 10 at a time from the browser. */
 const FIRST_PAGE = 10;
 
-export async function SearchWithDestinations() {
+export async function SearchWithDestinations({ size = "md" }: { size?: "md" | "lg" } = {}) {
   let destinations: Awaited<ReturnType<typeof listDestinations>> = [];
   try {
     destinations = await listDestinations();
@@ -37,6 +37,7 @@ export async function SearchWithDestinations() {
   }
   return (
     <DestinationSearch
+      size={size}
       destinations={destinations.map(
         ({ slug, name, region, country, storyCount, isDemo, coordinates }) => ({
           slug,
