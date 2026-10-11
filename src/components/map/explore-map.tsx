@@ -24,6 +24,12 @@ type ExploreMapProps = Omit<StoryMapProps, "selectedLocation" | "onLocationSelec
   enableLocationPicker?: boolean;
   /** Show the note that pins are demo examples. */
   showDemoNote?: boolean;
+  /**
+   * Bigger map for the explorer (home/destination pages). On phones it takes
+   * ~62% of the screen (svh: stable when the address bar shows/hides), leaving
+   * room to scroll the page past it instead of trapping the thumb on the map.
+   */
+  tall?: boolean;
   /** Controlled picker: current location and change handler (optional). */
   location?: LatLng | null;
   onLocationChange?: (location: LatLng | null) => void;
@@ -34,6 +40,7 @@ type ExploreMapProps = Omit<StoryMapProps, "selectedLocation" | "onLocationSelec
 export function ExploreMap({
   enableLocationPicker = false,
   showDemoNote = false,
+  tall = false,
   location,
   onLocationChange,
   pickerHint = "Click the map to see a location's coordinates. Nothing is saved here.",
@@ -48,7 +55,11 @@ export function ExploreMap({
     <div>
       <div
         id="story-map"
-        className="h-72 scroll-mt-6 overflow-hidden rounded-lg border-2 border-line bg-surface sm:h-96"
+        className={`scroll-mt-24 overflow-hidden rounded-lg border-2 border-line bg-surface ${
+          tall
+            ? "h-[62svh] max-h-[34rem] min-h-[22rem] sm:h-[30rem] sm:max-h-none lg:h-[34rem]"
+            : "h-72 sm:h-96"
+        }`}
       >
         <MapErrorBoundary>
           <StoryMap

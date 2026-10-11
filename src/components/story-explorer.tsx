@@ -123,6 +123,7 @@ export function StoryExplorer({
         </div>
         <div className="mt-4">
           <ExploreMap
+            tall
             points={points}
             layers={layers}
             fitToPoints={fitMapToStories}
