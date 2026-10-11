@@ -14,10 +14,20 @@ conditions** — not a hotel, room or restaurant rating site.
 
 **Live site:** <https://regret-map.shamiltp.me>
 
+### Demo login
+
+To try reactions and comments without creating an account:
+
+- **Email:** `nihal.chiyoor@gmail.com`
+- **Password:** `Sinan@9292`
+
+This is a shared test account (no moderator access). Please don't change its password.
+
 ---
 
 ## Contents
 
+- [Demo login](#demo-login)
 - [Features](#features)
 - [Content](#content)
 - [How the AI stays honest](#how-the-ai-stays-honest)
