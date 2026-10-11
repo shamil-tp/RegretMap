@@ -149,6 +149,13 @@ say "saved but isn't public yet"; now stories go live immediately.
   stamp; greyscale map tiles, red ink pins, square popups; comments with black guide lines and `[–]/[+]`.
 - Motion is CSS only (no Framer Motion; transform/opacity, reduced-motion respected).
 
+## 2j. Map-first home, no photos (2026-10-12)
+
+- Home = compact headline + search, then the map explorer (`src/components/explore-section.tsx`:
+  country filter, map/heatmap, paged feed). `/explore` 308-redirects to `/` (next.config redirects).
+- Destination photos removed everywhere (components, data, fetch script, image config).
+- Story cards show a reply count pill linking to `/stories/[id]#discussion` (`getCommentCounts`).
+
 ## 3. Owner must still do (remote, manual)
 
 1. **Apply the Phase 10 migration.** It is NOT on Supabase yet; checked 2026-10-11:

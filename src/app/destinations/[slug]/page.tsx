@@ -5,7 +5,6 @@ import { Suspense } from "react";
 import { AiRecommendations, AiRecommendationsSkeleton } from "@/components/ai-recommendations";
 import { BeforeYouGo } from "@/components/before-you-go";
 import { ChatLauncher } from "@/components/chat-launcher";
-import { DestinationPhoto } from "@/components/destination-photo";
 import {
   ExplorerSkeleton,
   NoStoriesYet,
@@ -15,8 +14,7 @@ import { ShareCallout } from "@/components/share-callout";
 import { StoryExplorer } from "@/components/story-explorer";
 import { Badge } from "@/components/ui/badge";
 import { buildBeforeYouGo } from "@/lib/before-you-go";
-import { destinationImage } from "@/lib/destination-images";
-import { getDestinationBySlug, getHelpfulState, listStoriesForDestination } from "@/lib/data";
+import { getCommentCounts, getDestinationBySlug, getHelpfulState, listStoriesForDestination } from "@/lib/data";
 import { getViewer } from "@/lib/supabase/session";
 import { formatLocation, storyNoun, type Destination } from "@/lib/stories";
 
@@ -85,14 +83,9 @@ async function DestinationContent({ params }: Pick<Props, "params">) {
 
 function DestinationHeader({ destination }: { destination: Destination }) {
   const location = formatLocation(destination);
-  const image = destinationImage(destination.slug);
   return (
-    <section className="border-b border-line bg-sky/50">
-      <div
-        className={`mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:px-6 sm:py-12 ${
-          image ? "md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-center md:gap-10" : ""
-        }`}
-      >
+    <section className="border-b-[2.5px] border-black bg-sky">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
         <div className="animate-fade-up">
           <nav aria-label="Breadcrumb" className="text-sm text-ink-muted">
             <ol className="flex items-center gap-2">
@@ -119,15 +112,6 @@ function DestinationHeader({ destination }: { destination: Destination }) {
             <p className="mt-4 max-w-2xl leading-relaxed text-ink">{destination.description}</p>
           )}
         </div>
-        {image && (
-          <DestinationPhoto
-            image={image}
-            alt={`${destination.name}${location ? `, ${location}` : ""}`}
-            sizes="(min-width: 768px) 560px, 100vw"
-            priority
-            className="order-first aspect-[16/9] animate-fade-up rounded-xl shadow-md ring-1 ring-line md:order-none md:aspect-[4/3]"
-          />
-        )}
       </div>
     </section>
   );
@@ -152,7 +136,10 @@ async function DestinationStories({ destination }: { destination: Destination })
   const months = stories.flatMap((s) => (s.travelMonth ? [s.travelMonth] : []));
   const hasDemo = stories.some((s) => s.isDemo);
   const viewer = await getViewer();
-  const helpful = await getHelpfulState(stories.map((s) => s.id), viewer?.id ?? null);
+  const [helpful, commentCounts] = await Promise.all([
+    getHelpfulState(stories.map((s) => s.id), viewer?.id ?? null),
+    getCommentCounts(stories.map((s) => s.id)),
+  ]);
 
   return (
     <>
@@ -184,6 +171,7 @@ async function DestinationStories({ destination }: { destination: Destination })
           storiesHeading={`Stories from ${destination.name}`}
           fitMapToStories
           helpful={helpful}
+          commentCounts={commentCounts}
         />
       </div>
 

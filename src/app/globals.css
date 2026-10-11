@@ -209,28 +209,7 @@ html .leaflet-heatmap-layer {
   to { opacity: 1; transform: none; }
 }
 
-/* Home hero illustration: the dotted route slowly "travels"; cloud and tag drift.
-   All of it stops under prefers-reduced-motion (rule above). */
-.hero-route {
-  animation: route-travel 2.4s linear infinite;
-}
 
-.hero-float {
-  animation: drift 7s ease-in-out infinite;
-}
-
-.hero-float-slow {
-  animation: drift 9s ease-in-out infinite reverse;
-}
-
-@keyframes route-travel {
-  to { stroke-dashoffset: -24; }
-}
-
-@keyframes drift {
-  0%, 100% { translate: 0 0; }
-  50% { translate: 6px -4px; }
-}
 
 @keyframes pop-in {
   from { opacity: 0; transform: translateY(10px) scale(0.97); }

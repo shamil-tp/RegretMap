@@ -210,6 +210,35 @@ export async function getStoriesByIds(ids: string[]): Promise<StoryWithDestinati
   return wanted.flatMap((id) => byId.get(id) ?? []);
 }
 
+/**
+ * Number of visible comments per story (published only; deleted placeholders
+ * and hidden comments don't count). Public read through RLS. Failures return
+ * an empty map so cards still render.
+ */
+export async function getCommentCounts(storyIds: string[]): Promise<Record<string, number>> {
+  const ids = [...new Set(storyIds)].filter(isUuid).slice(0, STORY_LIMIT.summaries);
+  if (ids.length === 0) return {};
+  try {
+    await connection();
+    const counts: Record<string, number> = {};
+    // Chunked so the request URL stays short.
+    for (let i = 0; i < ids.length; i += 150) {
+      const { data, error } = await getSupabase()
+        .from("story_comments")
+        .select("story_id")
+        .in("story_id", ids.slice(i, i + 150))
+        .eq("status", "published")
+        .limit(5000);
+      if (error) throw new Error(error.code ?? error.message);
+      for (const row of data as { story_id: string }[]) counts[row.story_id] = (counts[row.story_id] ?? 0) + 1;
+    }
+    return counts;
+  } catch (error) {
+    console.error(`[data] getCommentCounts failed: ${error instanceof Error ? error.message : "unknown"}`);
+    return {};
+  }
+}
+
 /** Countries that have published stories, most stories first. */
 export async function listCountries(): Promise<CountrySummary[]> {
   const totals = new Map<string, number>();

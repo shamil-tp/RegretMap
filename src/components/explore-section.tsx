@@ -1,18 +1,12 @@
 import { ChevronRight } from "lucide-react";
-import type { Metadata } from "next";
 import Link from "next/link";
-import { Suspense } from "react";
-import {
-  ExplorerSkeleton,
-  NoStoriesYet,
-  renderDataError,
-} from "@/components/data-states";
-import { DestinationSearch } from "@/components/destination-search";
-import { ShareCallout } from "@/components/share-callout";
 import { CountryFilter } from "@/components/country-filter";
+import { NoStoriesYet, renderDataError } from "@/components/data-states";
+import { DestinationSearch } from "@/components/destination-search";
 import { StoryExplorer } from "@/components/story-explorer";
 import {
   DataUnavailableError,
+  getCommentCounts,
   getHelpfulState,
   getStoriesByIds,
   type DestinationSummary,
@@ -24,46 +18,16 @@ import { defaultStoryFilters, filterAndSortStories } from "@/lib/story-filtering
 import { getViewer } from "@/lib/supabase/session";
 import { formatLocation, pluralize, storyNoun } from "@/lib/stories";
 
+/*
+ * The map explorer (country filter + map/heatmap + paged story feed), shown
+ * front and centre on the home page. No AI here.
+ */
+
 const FEATURED_DESTINATIONS = 10;
 /** Cards rendered on the server; more load 10 at a time from the browser. */
 const FIRST_PAGE = 10;
 
-export const metadata: Metadata = {
-  title: "Explore the map — RegretMap",
-  description: "Browse travel stories and lessons on a map, filtered by country and category.",
-};
-
-export default function ExplorePage({ searchParams }: PageProps<"/explore">) {
-  return (
-    <>
-      <section className="border-b border-line bg-sky/40">
-        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-          <h1 className="animate-fade-up font-display text-3xl font-semibold tracking-tight text-ink">
-            Explore the map
-          </h1>
-          <p className="mt-2 max-w-xl text-ink-muted">
-            Every pin is a story. Pick a country, filter by what went wrong, or jump to a place.
-          </p>
-          <div className="relative z-10 mt-5 max-w-xl">
-            <Suspense fallback={<div className="h-11 animate-pulse rounded-full bg-surface" />}>
-              <SearchWithDestinations />
-            </Suspense>
-          </div>
-        </div>
-      </section>
-
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <Suspense fallback={<ExplorerSkeleton />}>
-          <ExploreContent searchParams={searchParams} />
-        </Suspense>
-      </div>
-
-      <ShareCallout />
-    </>
-  );
-}
-
-async function SearchWithDestinations() {
+export async function SearchWithDestinations() {
   let destinations: Awaited<ReturnType<typeof listDestinations>> = [];
   try {
     destinations = await listDestinations();
@@ -88,7 +52,7 @@ async function SearchWithDestinations() {
   );
 }
 
-async function ExploreContent({ searchParams }: { searchParams: PageProps<"/explore">["searchParams"] }) {
+export async function ExploreContent({ searchParams }: { searchParams: Promise<{ country?: string | string[] }> }) {
   const requested = (await searchParams).country;
   let destinations, countries, totalCount;
   try {
@@ -114,7 +78,10 @@ async function ExploreContent({ searchParams }: { searchParams: PageProps<"/expl
   }
   if (stories.length === 0) return <NoStoriesYet />;
   const viewer = await getViewer();
-  const helpful = await getHelpfulState(firstPage.map((s) => s.id), viewer?.id ?? null);
+  const [helpful, commentCounts] = await Promise.all([
+    getHelpfulState(firstPage.map((s) => s.id), viewer?.id ?? null),
+    getCommentCounts(stories.map((s) => s.id)),
+  ]);
 
   // Most-documented destinations first (within the chosen country); the rest stay one click away.
   const byStories = destinations
@@ -141,6 +108,7 @@ async function ExploreContent({ searchParams }: { searchParams: PageProps<"/expl
         fitMapToStories={Boolean(country)}
         enableLocationPicker
         helpful={helpful}
+        commentCounts={commentCounts}
         aside={
           <>
             <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-ink-muted">

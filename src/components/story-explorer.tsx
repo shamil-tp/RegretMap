@@ -34,6 +34,7 @@ export function StoryExplorer({
   enableLocationPicker = false,
   aside,
   helpful,
+  commentCounts,
 }: {
   stories: StorySummary[];
   /** Full stories already loaded on the server (e.g. the first page). */
@@ -46,6 +47,8 @@ export function StoryExplorer({
   aside?: React.ReactNode;
   /** Helpful counts and the viewer's own reactions. */
   helpful?: HelpfulState;
+  /** Visible comment count per story id. */
+  commentCounts?: Record<string, number>;
 }) {
   const { visible, ...filterState } = useStoryFilters(stories);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
@@ -181,6 +184,7 @@ export function StoryExplorer({
                   story={story}
                   highlighted={story.id === highlightedId}
                   onShowOnMap={() => showOnMap(story.id)}
+                  replies={commentCounts?.[story.id]}
                   helpful={
                     helpfulState?.available
                       ? {

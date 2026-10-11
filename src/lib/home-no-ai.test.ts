@@ -2,16 +2,17 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 /*
- * The home page must not generate or fetch destination-specific AI content:
- * AI lessons and the chat belong on destination pages, after a place is
- * chosen. This guards against someone wiring AI back into the home page.
+ * The home page (and the map explorer it renders) must not generate or fetch
+ * destination-specific AI content: AI lessons and the chat belong on
+ * destination pages, after a place is chosen.
  */
 describe("home page has no AI", () => {
-  const home = readFileSync("src/app/page.tsx", "utf8");
-  const imports = home
-    .split(/\r?\n/)
-    .filter((line) => /^\s*import\b|\bfrom "/.test(line))
-    .join(" ");
+  const importsOf = (path: string) =>
+    readFileSync(path, "utf8")
+      .split(/\r?\n/)
+      .filter((line) => /^\s*import\b|\bfrom "/.test(line))
+      .join(" ");
+  const imports = `${importsOf("src/app/page.tsx")} ${importsOf("src/components/explore-section.tsx")}`;
 
   it("doesn't import the AI client, recommendations or chat", () => {
     expect(imports).toContain("@/lib/data"); // sanity: we're reading the real imports

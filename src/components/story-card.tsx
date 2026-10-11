@@ -1,4 +1,4 @@
-import { ArrowRight, MapPin, Navigation } from "lucide-react";
+import { ArrowRight, MapPin, MessageCircle, Navigation } from "lucide-react";
 import Link from "next/link";
 import { StoryReactions, type HelpfulProps } from "@/components/helpful-button";
 import { CategoryBadge } from "@/components/category-badge";
@@ -14,6 +14,7 @@ export function StoryCard({
   highlighted = false,
   onShowOnMap,
   helpful,
+  replies,
 }: {
   story: StoryWithDestination;
   highlighted?: boolean;
@@ -21,6 +22,8 @@ export function StoryCard({
   helpful?: HelpfulProps;
   /** When provided and the story has coordinates, shows a "Show on map" action. */
   onShowOnMap?: () => void;
+  /** Visible comment count; when given, a link to the discussion is shown. */
+  replies?: number;
 }) {
   const travelDate = formatTravelDate(story);
 
@@ -81,6 +84,16 @@ export function StoryCard({
             <Navigation aria-hidden className="size-3.5" />
             Show on map
           </button>
+        )}
+        {replies !== undefined && (
+          <Link
+            href={`/stories/${story.id}#discussion`}
+            className="brutal-press inline-flex min-h-9 items-center gap-1.5 rounded-full border-2 border-black bg-highlight px-3 font-mono text-xs font-bold text-black"
+          >
+            <MessageCircle aria-hidden className="size-3.5" />
+            {replies === 0 ? "Reply" : `${replies} ${replies === 1 ? "reply" : "replies"}`}
+            <span className="sr-only"> to {story.title}</span>
+          </Link>
         )}
         {helpful && <StoryReactions {...helpful} />}
         <span className="text-ink-muted sm:ml-auto">
