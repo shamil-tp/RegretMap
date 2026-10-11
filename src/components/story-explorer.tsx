@@ -111,7 +111,7 @@ export function StoryExplorer({
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-12">
-      <aside aria-labelledby="map-heading" className="lg:sticky lg:top-6 lg:self-start">
+      <aside aria-labelledby="map-heading" className="lg:sticky lg:top-24 lg:self-start">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="map-heading" className="text-lg font-semibold text-ink">
             {mapHeading}

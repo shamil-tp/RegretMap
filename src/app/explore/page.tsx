@@ -126,7 +126,7 @@ async function ExploreContent({ searchParams }: { searchParams: PageProps<"/expl
   return (
     <>
       {/* Stacks on phones; one row from sm up. min-w-0 lets the filter shrink inside the card. */}
-      <div className="mb-8 flex flex-col gap-2 rounded-lg border border-line bg-card px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+      <div className="brutal-card mb-8 flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <CountryFilter countries={countries} selected={country} totalCount={totalCount} />
         <p className="shrink-0 text-sm text-ink-muted">
           {country ? `${pluralize(stories.length, "story", "stories")} from ${country}` : `${countries.length} countries`}

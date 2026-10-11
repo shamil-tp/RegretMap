@@ -23,7 +23,7 @@ export function DestinationPhoto({
 }) {
   if (!image) return <div aria-hidden className={`bg-sky/60 ${className}`} />;
   return (
-    <div className={`relative overflow-hidden ${className}`}>
+    <div className={`relative overflow-hidden border-b-2 border-black ${className}`}>
       <Image
         src={image.src}
         alt={alt}

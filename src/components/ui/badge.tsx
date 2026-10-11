@@ -1,15 +1,15 @@
 type BadgeTone = "neutral" | "accent" | "demo" | "mint" | "sky" | "butter" | "lavender" | "peach";
 
 const tones: Record<BadgeTone, string> = {
-  neutral: "bg-lavender/60 text-ink",
-  accent: "bg-strawberry text-ink",
-  mint: "bg-mint text-ink",
-  sky: "bg-sky text-ink",
-  butter: "bg-butter text-ink",
-  lavender: "bg-lavender text-ink",
-  peach: "bg-peach text-ink",
-  demo: "border border-dashed border-ink-muted/50 text-ink-muted",
-};
+  neutral: "bg-card text-black",
+  accent: "bg-highlight text-black",
+  mint: "bg-go text-black",
+  sky: "bg-sky text-black",
+  butter: "bg-butter text-black",
+  lavender: "bg-lavender text-black",
+  peach: "bg-peach text-black",
+  demo: "border-dashed text-ink-muted",
+}
 
 export function Badge({
   tone = "neutral",
@@ -20,7 +20,7 @@ export function Badge({
 }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${tones[tone]}`}
+      className={`inline-flex items-center gap-1 rounded-full border-2 border-black px-2.5 py-0.5 font-mono text-[0.7rem] font-bold uppercase tracking-tight ${tones[tone]}`}
     >
       {children}
     </span>

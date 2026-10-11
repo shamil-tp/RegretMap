@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Loader2, MessageCircle, Minus, Pencil, Plus, Reply, Trash2 } from "lucide-react";
+import { AlertCircle, Loader2, MessageCircle, Pencil, Reply, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useId, useState, useTransition } from "react";
@@ -114,9 +114,9 @@ function ThreadItem({
           type="button"
           onClick={() => setCollapsed(false)}
           aria-expanded={false}
-          className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-line bg-card px-3 text-sm text-ink-muted hover:border-coral hover:text-ink"
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-md border-2 border-dashed border-black bg-canvas px-3 font-mono text-xs text-ink hover:bg-highlight"
         >
-          <Plus aria-hidden className="size-3.5" />
+          <span aria-hidden className="font-bold">[+]</span>
           <span className="font-medium text-ink">
             {thread.deleted ? "Deleted comment" : thread.authorName}
           </span>
@@ -146,7 +146,7 @@ function ThreadItem({
             aria-label={`Collapse thread from ${name}`}
             className="group ml-1 flex w-3 shrink-0 justify-center pt-1 sm:ml-3 sm:w-5"
           >
-            <span className="block h-full w-0.5 rounded-full bg-strawberry group-hover:bg-coral" />
+            <span className="block h-full w-[2.5px] bg-black transition-colors group-hover:bg-regret" />
           </button>
 
           <div className="min-w-0 flex-1 pl-0.5 sm:pl-2">
@@ -233,7 +233,7 @@ function CommentCard({
 
   return (
     <article
-      className={`animate-fade-up rounded-lg border border-line px-4 py-3 shadow-sm ${
+      className={`animate-pop-in rounded-md border-2 border-black px-4 py-3 shadow-sm ${
         comment.depth === 0 ? "bg-card" : "bg-canvas"
       }`}
       aria-busy={pending}
@@ -317,9 +317,9 @@ function CollapseButton({ onClick, label }: { onClick: () => void; label: string
       onClick={onClick}
       aria-label={label}
       aria-expanded
-      className="-ml-1 inline-grid size-7 shrink-0 place-items-center rounded-full text-ink-muted hover:bg-strawberry hover:text-ink"
+      className="-ml-1 inline-grid h-6 shrink-0 place-items-center rounded-[6px] border border-black bg-canvas px-1.5 font-mono text-xs font-bold text-ink hover:bg-highlight"
     >
-      <Minus aria-hidden className="size-3.5" />
+      <span aria-hidden>[–]</span>
     </button>
   );
 }
@@ -392,7 +392,7 @@ function CommentForm({
         placeholder={parentId ? "Write a reply…" : "Share a tip or ask the traveller something…"}
         aria-invalid={tooLong || undefined}
         aria-describedby={`${fieldId}-count`}
-        className="mt-1 block w-full resize-y rounded-md border border-line bg-card px-3 py-2 text-[0.95rem] text-ink placeholder:text-ink-muted/80 focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
+        className="mt-1 block w-full resize-y rounded-md border-2 border-line bg-card px-3 py-2 text-[0.95rem] text-ink placeholder:text-ink-muted/80 focus:border-black focus:bg-card focus:shadow-[4px_4px_0_0_#000] focus:outline-none"
       />
       <div className="mt-2 flex flex-wrap items-center gap-3">
         <button

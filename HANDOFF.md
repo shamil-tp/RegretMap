@@ -139,6 +139,16 @@ say "saved but isn't public yet"; now stories go live immediately.
   hero postcard collage (`HeroCollage`), home destination photo cards, story postcards, destination
   page header. Every photo shows its credit; no photo → plain pastel panel.
 
+## 2i. Neo-brutalist redesign (2026-10-12)
+
+- Design source: `src/design/design.md` + `src/design/neobrut/` (static mock-up; excluded from ESLint).
+- Applied via tokens in `globals.css` (paper canvas + dot grid, ink borders `line=#000`, block shadows
+  as Tailwind `shadow-*`, accents `regret/map/highlight/go`, radii 10/14/18/24), fonts Space Grotesk /
+  IBM Plex Sans / JetBrains Mono via next/font, `.brutal-press` / `.brutal-card(-hover)` physics.
+- Buttons yellow CTA pills; badges mono pills; sticky white header (z-1100, above Leaflet) with RM
+  stamp; greyscale map tiles, red ink pins, square popups; comments with black guide lines and `[–]/[+]`.
+- Motion is CSS only (no Framer Motion; transform/opacity, reduced-motion respected).
+
 ## 3. Owner must still do (remote, manual)
 
 1. **Apply the Phase 10 migration.** It is NOT on Supabase yet; checked 2026-10-11:

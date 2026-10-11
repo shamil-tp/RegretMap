@@ -34,13 +34,13 @@ const TOP_DESTINATIONS = 8;
 export default function HomePage() {
   return (
     <>
-      <section className="relative overflow-x-clip border-b border-line bg-strawberry/30">
+      <section className="relative overflow-x-clip border-b-[2.5px] border-black">
         <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-12 sm:px-6 sm:py-16 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
           <div className="relative z-10">
             <h1 className="animate-fade-up font-display text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
               Travel smarter.
               <br />
-              <span className="text-accent">Regret less.</span>
+              <span className="relative inline-block bg-highlight px-2 text-black [box-decoration-break:clone]">Regret less.</span>
             </h1>
             <p
               className="mt-4 max-w-md animate-fade-up text-lg text-ink-muted"
@@ -177,7 +177,7 @@ async function HomeSections() {
               {top.map((destination, index) => (
                 <li
                   key={destination.slug}
-                  className="group relative flex animate-fade-up flex-col overflow-hidden rounded-lg border border-line bg-card shadow-sm transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-lg"
+                  className="brutal-card brutal-card-hover group relative flex animate-pop-in flex-col overflow-hidden"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <DestinationPhoto
@@ -206,7 +206,7 @@ async function HomeSections() {
       )}
 
       <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <div className="flex flex-col items-start gap-4 rounded-xl border border-line bg-sky/50 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+        <div className="flex flex-col items-start gap-4 rounded-xl border-2 border-line bg-sky/50 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
           <div>
             <h2 className="font-display text-2xl font-semibold tracking-tight text-ink">See it on the map</h2>
             <p className="mt-1 max-w-lg text-ink-muted">
@@ -225,7 +225,7 @@ async function HomeSections() {
 
 function StoryPostcard({ story }: { story: StoryWithDestination }) {
   return (
-    <article className="group relative flex h-full flex-col overflow-hidden rounded-lg border border-line bg-card shadow-sm transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md">
+    <article className="brutal-card brutal-card-hover group relative flex h-full flex-col overflow-hidden">
       <DestinationPhoto
         image={destinationImage(story.destination.slug)}
         alt={story.destination.name}

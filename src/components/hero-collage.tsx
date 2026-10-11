@@ -22,7 +22,7 @@ export function HeroCollage({ items }: { items: CollageItem[] }) {
         <path
           className="hero-route"
           d="M10 70 C25 40 45 65 55 38 S80 12 92 20"
-          stroke="#FF7777"
+          stroke="#000000"
           strokeWidth="0.8"
           strokeLinecap="round"
           strokeDasharray="0.6 2.6"
@@ -31,7 +31,7 @@ export function HeroCollage({ items }: { items: CollageItem[] }) {
       {items.slice(0, 3).map((item, i) => (
         <figure
           key={item.slug}
-          className={`group absolute animate-fade-up rounded-md bg-card p-2 pb-1.5 shadow-lg ring-1 ring-line transition-transform duration-300 hover:z-20 hover:rotate-0 hover:scale-[1.03] ${LAYOUT[i]}`}
+          className={`group absolute animate-pop-in rounded-md border-[2.5px] border-black bg-card p-2 pb-1.5 shadow-md transition-transform duration-300 hover:z-20 hover:rotate-0 hover:scale-[1.03] ${LAYOUT[i]}`}
           style={{ animationDelay: `${120 + i * 90}ms` }}
         >
           <div className="relative aspect-[4/3] overflow-hidden rounded-sm">

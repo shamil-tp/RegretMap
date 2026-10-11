@@ -27,8 +27,8 @@ export function StoryCard({
   return (
     <article
       id={`story-${story.id}`}
-      className={`scroll-mt-24 animate-fade-up rounded-lg border bg-card p-5 shadow-sm transition-[box-shadow,transform,border-color] duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-6 ${
-        highlighted ? "border-coral ring-2 ring-coral/30" : "border-line"
+      className={`brutal-card brutal-card-hover scroll-mt-24 animate-pop-in p-5 sm:p-6 ${
+        highlighted ? "ring-4 ring-highlight" : ""
       }`}
     >
       <div className="flex flex-wrap items-center gap-2">
@@ -55,7 +55,7 @@ export function StoryCard({
       </p>
 
       {story.lesson && (
-        <div className="mt-4 rounded-md bg-butter/50 px-4 py-3">
+        <div className="mt-4 rounded-md border-2 border-black bg-butter px-4 py-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
             {story.source === "editorial" ? "The lesson" : <>What I&apos;d do differently</>}
           </p>
@@ -94,7 +94,7 @@ export function StoryCard({
 
 export function StoryCardSkeleton() {
   return (
-    <div aria-hidden className="animate-pulse rounded-lg border border-line bg-card p-5">
+    <div aria-hidden className="animate-pulse rounded-lg border-2 border-line bg-card p-5">
       <div className="flex gap-2">
         <div className="h-5 w-20 rounded-full bg-surface" />
         <div className="h-5 w-28 rounded-full bg-surface" />

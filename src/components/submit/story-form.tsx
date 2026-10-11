@@ -64,7 +64,7 @@ const fieldOrder: SubmissionField[] = [
 ];
 
 const inputClasses =
-  "w-full rounded-md border border-line bg-card px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30 aria-[invalid=true]:border-accent";
+  "w-full rounded-md border-2 border-line bg-card px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted focus:border-black focus:bg-card focus:shadow-[4px_4px_0_0_#000] focus:outline-none aria-[invalid=true]:border-accent";
 
 /** Remount (via `key`) to start a fresh submission with a new one-time key. */
 export function StoryForm({
@@ -216,7 +216,7 @@ export function StoryForm({
 
   if (state.status === "submitted") {
     return (
-      <div className="rounded-lg border border-line bg-mint/60 px-6 py-10 text-center">
+      <div className="rounded-lg border-2 border-line bg-mint/60 px-6 py-10 text-center">
         <CheckCircle2 aria-hidden className="mx-auto size-10 text-accent" />
         <h2
           ref={successRef}
@@ -257,7 +257,7 @@ export function StoryForm({
       action={formAction}
       onSubmit={validateBeforeSubmit}
       noValidate
-      className="space-y-10 rounded-xl border border-line bg-card p-5 shadow-sm sm:p-8"
+      className="space-y-10 rounded-xl border-2 border-line bg-card p-5 shadow-sm sm:p-8"
     >
       {showSummary && (
         <div

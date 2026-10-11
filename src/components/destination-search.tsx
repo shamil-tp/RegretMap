@@ -271,7 +271,7 @@ export function DestinationSearch({
               placeholder={placeholder}
               maxLength={PLACE_QUERY_MAX}
               autoComplete="off"
-              className={`w-full rounded-full border border-line bg-card pl-10 pr-10 text-ink shadow-sm transition-[box-shadow,border-color] duration-200 placeholder:text-ink-muted focus:border-coral focus:shadow-md focus:outline-none focus:ring-4 focus:ring-coral/20 ${
+              className={`w-full rounded-full border-2 border-line bg-card pl-10 pr-10 text-ink shadow-sm transition-[box-shadow,border-color] duration-200 placeholder:text-ink-muted focus:border-black focus:shadow-[4px_4px_0_0_#000] focus:outline-none ${
                 size === "lg" ? "py-4 text-base sm:text-lg" : "py-3 text-sm"
               }`}
             />
@@ -299,7 +299,7 @@ export function DestinationSearch({
       </form>
 
       {isOpen && (
-        <div className="absolute inset-x-0 top-full z-50 mt-1.5 max-h-96 overflow-y-auto rounded-lg border border-line bg-card p-1.5 shadow-lg">
+        <div className="absolute inset-x-0 top-full z-50 mt-1.5 max-h-96 overflow-y-auto rounded-lg border-2 border-line bg-card p-1.5 shadow-lg">
           <ul id={listId} role="listbox" aria-label="Destination suggestions">
             {localMatches.length > 0 && (
               <li role="presentation" className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">

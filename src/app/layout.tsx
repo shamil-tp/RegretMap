@@ -1,17 +1,30 @@
 import type { Metadata } from "next";
-import { Fraunces, Geist } from "next/font/google";
+import { IBM_Plex_Sans, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Neo-brutalist type system (src/design/design.md §3). Self-hosted by
+// next/font: no layout shift, no request to Google at runtime.
+const display = Space_Grotesk({
+  variable: "--font-space-grotesk",
   subsets: ["latin"],
+  weight: ["500", "700"],
+  display: "swap",
 });
 
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
+const body = IBM_Plex_Sans({
+  variable: "--font-plex-sans",
   subsets: ["latin"],
+  weight: ["400", "600"],
+  display: "swap",
+});
+
+const mono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
+  subsets: ["latin"],
+  weight: ["500", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -24,7 +37,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${fraunces.variable} h-full antialiased`}
+      className={`${display.variable} ${body.variable} ${mono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col font-sans">
         <a

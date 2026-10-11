@@ -48,7 +48,7 @@ export function ExploreMap({
     <div>
       <div
         id="story-map"
-        className="h-72 scroll-mt-6 overflow-hidden rounded-lg border border-line bg-surface sm:h-96"
+        className="h-72 scroll-mt-6 overflow-hidden rounded-lg border-2 border-line bg-surface sm:h-96"
       >
         <MapErrorBoundary>
           <StoryMap

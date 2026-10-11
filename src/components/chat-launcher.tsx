@@ -11,7 +11,7 @@ const DestinationChat = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div role="status" className="h-64 animate-pulse rounded-lg border border-line bg-card">
+      <div role="status" className="h-64 animate-pulse rounded-lg border-2 border-line bg-card">
         <span className="sr-only">Opening the chat…</span>
       </div>
     ),
@@ -36,7 +36,7 @@ export function ChatLauncher({ slug, destinationName }: { slug: string; destinat
   return (
     <section
       aria-labelledby="ask-heading"
-      className="flex flex-col items-start gap-4 rounded-lg border border-line bg-sky/50 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+      className="brutal-card flex flex-col items-start gap-4 bg-sky p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"
     >
       <div>
         <h2 id="ask-heading" className="font-display text-xl font-semibold text-ink">

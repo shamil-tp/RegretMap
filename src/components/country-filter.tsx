@@ -50,7 +50,7 @@ export function CountryFilter({
           onChange={(event) => choose(event.target.value)}
           disabled={pending}
           aria-busy={pending}
-          className="block min-h-10 w-full appearance-none truncate rounded-full border border-line bg-card py-2 pl-4 pr-10 text-sm text-ink focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30 disabled:opacity-60"
+          className="block min-h-10 w-full appearance-none truncate rounded-full border-2 border-line bg-card py-2 pl-4 pr-10 text-sm text-ink focus:border-black focus:bg-card focus:shadow-[4px_4px_0_0_#000] focus:outline-none disabled:opacity-60"
         >
           <option value="">All countries ({pluralize(totalCount, "story", "stories")})</option>
           {countries.map((c) => (

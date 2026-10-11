@@ -160,7 +160,7 @@ export default function StoryMap({
       {(tileError || tileConfig.isInvalid) && (
         <p
           role="status"
-          className="absolute inset-x-3 top-3 z-[1000] rounded-md border border-line bg-canvas/95 px-3 py-2 text-sm text-ink-muted shadow-sm"
+          className="absolute inset-x-3 top-3 z-[1000] rounded-md border-2 border-line bg-canvas/95 px-3 py-2 text-sm text-ink-muted shadow-sm"
         >
           {tileError
             ? "Some map tiles couldn't load. Check your connection and try again."

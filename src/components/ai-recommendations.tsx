@@ -54,7 +54,7 @@ export async function AiRecommendations({
         {data.recommendations.map((rec, index) => (
           <li
             key={index}
-            className="animate-fade-up rounded-lg border border-line bg-card p-5 transition-shadow duration-200 hover:shadow-md"
+            className="brutal-card brutal-card-hover animate-pop-in p-5"
             style={{ animationDelay: `${index * 70}ms` }}
           >
             <div className="flex flex-wrap items-center gap-2">
@@ -107,7 +107,7 @@ function Note({ children }: { children: React.ReactNode }) {
 
 export function AiRecommendationsSkeleton() {
   return (
-    <div className="mt-6 rounded-lg border border-line bg-surface p-6" aria-hidden>
+    <div className="mt-6 rounded-lg border-2 border-line bg-surface p-6" aria-hidden>
       <div className="h-3 w-40 animate-pulse rounded bg-line" />
       <div className="mt-4 h-4 w-full max-w-2xl animate-pulse rounded bg-line" />
       <div className="mt-2 h-4 w-2/3 animate-pulse rounded bg-line" />

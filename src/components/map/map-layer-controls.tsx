@@ -9,7 +9,7 @@ export function MapLayerToggle({
   onChange: (value: MapLayers) => void;
 }) {
   return (
-    <fieldset className="inline-flex rounded-md border border-line p-0.5 text-sm">
+    <fieldset className="inline-flex rounded-md border-2 border-line p-0.5 text-sm">
       <legend className="sr-only">Show on map</legend>
       {(Object.keys(mapLayerLabels) as MapLayers[]).map((option) => (
         <label

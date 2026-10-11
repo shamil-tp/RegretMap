@@ -65,7 +65,7 @@ export function StoryFilters({
   totalCount: number;
 }) {
   const selectClasses =
-    "rounded-md border border-line bg-canvas py-1.5 pl-2.5 pr-8 text-sm text-ink focus:border-ink-muted";
+    "rounded-md border-2 border-line bg-canvas py-1.5 pl-2.5 pr-8 text-sm text-ink focus:border-ink-muted";
 
   return (
     <div className="space-y-3">
@@ -80,7 +80,7 @@ export function StoryFilters({
             type="button"
             aria-pressed={filters.category === value}
             onClick={() => setFilters((f) => ({ ...f, category: value }))}
-            className="shrink-0 rounded-full border border-line px-3 py-1.5 text-sm text-ink-muted transition-colors hover:border-ink-muted hover:text-ink aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-white"
+            className="shrink-0 rounded-full border-2 border-line px-3 py-1.5 text-sm text-ink-muted transition-colors hover:border-ink-muted hover:text-ink aria-pressed:border-ink aria-pressed:bg-ink aria-pressed:text-white"
           >
             {value === "all" ? "All" : storyCategories[value]}
           </button>

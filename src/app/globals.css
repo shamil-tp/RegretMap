@@ -1,45 +1,65 @@
 @import "tailwindcss";
 
 /*
- * RegretMap design tokens — light theme only, candy/macaron palette.
- * Pastels are for surfaces, chips and details; text stays deep plum.
- * Watermelon coral (#ff7777) is decorative (pins, borders): it is too light for
- * text or white-on-coral buttons, so `accent` is a deeper coral that passes
- * WCAG AA (≥ 4.5:1) on white and vanilla.
+ * RegretMap design tokens — rounded neo-brutalism (src/design/design.md).
+ * Raw paper canvas, black ink borders, hard zero-blur block shadows.
+ * Accent coding: regret red, map blue, caution-yellow CTAs, retro mint tips.
+ * Token NAMES are kept from the earlier theme so every component picks up the
+ * new system; text colours are chosen for WCAG AA on white and paper.
  */
 @theme {
-  --color-canvas: #fffcf6; /* warm vanilla page background */
+  --color-canvas: #f7f6f2; /* raw newspaper base */
   --color-card: #ffffff;
-  --color-surface: #f7f2f8; /* quiet panels, skeletons */
-  --color-line: #e9e3ed;
-  --color-ink: #332b40; /* deep plum */
-  --color-ink-muted: #756d7f; /* muted mauve */
-  --color-accent: #c93f52;
-  --color-accent-hover: #a8334a;
-  --color-accent-soft: #ffdce5; /* strawberry milk */
-  --color-coral: #ff7777; /* watermelon coral, decorative only */
+  --color-surface: #faf9f5; /* warm neutral panels, skeletons */
+  --color-line: #000000; /* ink borders */
+  --color-ink: #111111;
+  --color-ink-muted: #666666;
+  --color-accent: #0055ff; /* electric blue: links, focus, interactive text */
+  --color-accent-hover: #0040cc;
+  --color-accent-soft: #fff3b0; /* yellow highlight wash */
+  --color-coral: #ff3b30; /* regret red: pins, heat, severity, borders */
 
-  --color-strawberry: #ffdce5;
-  --color-peach: #ffe2d1;
-  --color-butter: #fff0b8;
-  --color-mint: #d9f5e6;
-  --color-sky: #dceeff;
-  --color-lavender: #e9dfff;
+  /* Solid accents */
+  --color-regret: #ff3b30;
+  --color-map: #0055ff;
+  --color-highlight: #ffd600; /* primary CTAs, alerts */
+  --color-go: #00e599; /* positive tips */
 
-  /* Gentle motion (all disabled under prefers-reduced-motion below). */
-  --animate-emoji-pop: emoji-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Light washes of the accents (old pastel names kept for compatibility) */
+  --color-strawberry: #ffe1de;
+  --color-peach: #ffe4cc;
+  --color-butter: #fff3b0;
+  --color-mint: #ccf9e9;
+  --color-sky: #dce6ff;
+  --color-lavender: #eeece6;
+
+  /* Hard block shadows — no blur, ever. */
+  --shadow-xs: 2px 2px 0 0 #000;
+  --shadow-sm: 3px 3px 0 0 #000;
+  --shadow: 3px 3px 0 0 #000;
+  --shadow-md: 5px 5px 0 0 #000;
+  --shadow-lg: 7px 7px 0 0 #000;
+  --shadow-xl: 8px 8px 0 0 #000;
+
+  /* Motion: snappy, springy, GPU-only (transform/opacity). */
+  --ease-snap: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.18, 0.89, 0.32, 1.28);
+  --animate-emoji-pop: emoji-pop 380ms var(--ease-spring);
   /* "backwards" (not "both"): the end state isn't held, so hover transforms still work. */
-  --animate-fade-up: fade-up 320ms ease-out backwards;
+  --animate-fade-up: fade-up 420ms var(--ease-snap) backwards;
+  --animate-pop-in: pop-in 380ms var(--ease-spring) backwards;
 
-  /* Softer, rounder corners everywhere. */
-  --radius-md: 0.75rem;
-  --radius-lg: 1.25rem;
-  --radius-xl: 1.5rem;
+  /* Radius scale from the design spec. */
+  --radius-sm: 0.625rem; /* 10px */
+  --radius-md: 0.875rem; /* 14px */
+  --radius-lg: 1.125rem; /* 18px */
+  --radius-xl: 1.5rem; /* 24px */
 }
 
 @theme inline {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 }
 
 :root {
@@ -47,8 +67,54 @@
 }
 
 body {
-  background: var(--color-canvas);
+  background-color: var(--color-canvas);
+  /* Tactile dot grid (design spec §2). */
+  background-image: radial-gradient(rgb(0 0 0 / 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
   color: var(--color-ink);
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.02em;
+}
+
+/*
+ * Neo-brutal physics, shared by buttons and cards:
+ * hover lifts up-left as the shadow grows; press sinks in and the shadow
+ * collapses. Transform + box-shadow only, so it stays on the compositor.
+ */
+@layer components {
+  .brutal-press {
+    box-shadow: var(--shadow-sm);
+    transition:
+      transform 150ms var(--ease-snap),
+      box-shadow 150ms var(--ease-snap),
+      background-color 150ms var(--ease-snap);
+  }
+  .brutal-press:hover:not(:disabled) {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-md);
+  }
+  .brutal-press:active:not(:disabled) {
+    transform: translate(3px, 3px);
+    box-shadow: 0 0 0 0 #000;
+  }
+
+  .brutal-card {
+    border: 2.5px solid #000;
+    border-radius: var(--radius-lg);
+    background-color: var(--color-card);
+    box-shadow: var(--shadow-md);
+    transition:
+      transform 150ms var(--ease-snap),
+      box-shadow 150ms var(--ease-snap);
+  }
+  .brutal-card-hover:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-lg);
+  }
 }
 
 /* In the base layer so utilities (e.g. focus:outline-none on programmatically
@@ -69,9 +135,19 @@ html .leaflet-container {
 }
 
 html .leaflet-popup-content-wrapper {
-  border-radius: 1rem;
+  border: 2px solid #000;
+  border-radius: 14px;
   color: var(--color-ink);
-  box-shadow: 0 6px 20px rgb(51 43 64 / 0.15);
+  box-shadow: var(--shadow-md);
+}
+
+html .leaflet-popup-tip-container {
+  display: none;
+}
+
+/* Monochrome base map so red story pins and heat stand out (design spec §6.4). */
+html .leaflet-tile {
+  filter: grayscale(100%) contrast(120%) brightness(98%);
 }
 
 html .leaflet-popup-content {
@@ -81,28 +157,28 @@ html .leaflet-popup-content {
 
 /* Leaflet positions markers with `transform`, so pins must never set it. */
 .map-pin {
-  border: 2px solid #ffffff;
+  border: 2px solid #000;
   border-radius: 9999px;
-  background: var(--color-accent);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
+  background: var(--color-regret);
+  box-shadow: 2px 2px 0 0 #000;
   transition: box-shadow 150ms ease-out;
 }
 
 .map-pin:hover {
   box-shadow:
-    0 0 0 4px rgb(255 119 119 / 0.35),
-    0 1px 3px rgb(0 0 0 / 0.35);
+    0 0 0 4px rgb(255 214 0 / 0.8),
+    2px 2px 0 0 #000;
 }
 
 .map-pin--selected {
-  background: var(--color-ink);
+  background: var(--color-highlight);
 }
 
 .map-pin--highlighted {
   border-width: 3px;
   box-shadow:
-    0 0 0 3px rgb(255 119 119 / 0.35),
-    0 1px 3px rgb(0 0 0 / 0.35);
+    0 0 0 3px rgb(255 214 0 / 0.9),
+    2px 2px 0 0 #000;
 }
 
 /* Story-density heatmap: translucent so the base map stays readable. */
@@ -154,4 +230,9 @@ html .leaflet-heatmap-layer {
 @keyframes drift {
   0%, 100% { translate: 0 0; }
   50% { translate: 6px -4px; }
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: none; }
 }

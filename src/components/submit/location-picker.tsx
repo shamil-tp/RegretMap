@@ -202,7 +202,7 @@ export function LocationPicker({
           maxLength={PLACE_QUERY_MAX}
           autoComplete="off"
           placeholder="Search a destination or place, e.g. Manali, Baga Beach"
-          className="w-full rounded-full border border-line bg-card py-3 pl-10 pr-10 text-sm text-ink shadow-sm placeholder:text-ink-muted focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30 aria-[invalid=true]:border-accent"
+          className="w-full rounded-full border-2 border-line bg-card py-3 pl-10 pr-10 text-sm text-ink shadow-sm placeholder:text-ink-muted focus:border-black focus:bg-card focus:shadow-[4px_4px_0_0_#000] focus:outline-none aria-[invalid=true]:border-accent"
         />
         <div className="absolute right-2.5 top-1/2 flex -translate-y-1/2 items-center">
           {loading ? (
@@ -223,7 +223,7 @@ export function LocationPicker({
       </div>
 
       {searching && (options.length > 0 || showEmpty || placeError) && (
-        <div className="absolute inset-x-0 top-full z-50 mt-1.5 max-h-80 overflow-y-auto rounded-lg border border-line bg-card p-1.5 shadow-lg">
+        <div className="absolute inset-x-0 top-full z-50 mt-1.5 max-h-80 overflow-y-auto rounded-lg border-2 border-line bg-card p-1.5 shadow-lg">
           <ul id={listId} role="listbox" aria-label="Location suggestions">
             {local.length > 0 && (
               <li role="presentation" className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">

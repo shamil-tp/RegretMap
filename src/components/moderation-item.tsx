@@ -65,7 +65,7 @@ export function ModerationItem({ item }: { item: QueueItem }) {
   }
 
   return (
-    <article className="rounded-lg border border-line p-5">
+    <article className="rounded-lg border-2 border-line p-5">
       <div className="flex flex-wrap items-center gap-2">
         <Badge tone={label.tone}>{label.text}</Badge>
         <Badge>{storyCategories[item.category] ?? item.category}</Badge>

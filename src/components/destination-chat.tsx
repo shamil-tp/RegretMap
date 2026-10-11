@@ -117,8 +117,8 @@ export function DestinationChat({ slug, destinationName }: { slug: string; desti
   }
 
   return (
-    <section aria-labelledby="chat-heading" className="rounded-lg border border-line bg-card shadow-sm">
-      <div className="rounded-t-lg border-b border-line bg-sky/60 px-5 py-4">
+    <section aria-labelledby="chat-heading" className="brutal-card overflow-hidden">
+      <div className="border-b-2 border-black bg-highlight px-5 py-4">
         <h2 id="chat-heading" className="font-display text-xl font-semibold text-ink">
           Ask travellers
         </h2>
@@ -146,7 +146,7 @@ export function DestinationChat({ slug, destinationName }: { slug: string; desti
                   type="button"
                   onClick={() => ask(suggestion)}
                   disabled={pending}
-                  className="min-h-10 rounded-full border border-line bg-canvas px-3.5 py-1.5 text-left text-sm text-ink hover:border-coral hover:bg-strawberry/40 disabled:opacity-50"
+                  className="min-h-10 rounded-full border-2 border-line bg-canvas px-3.5 py-1.5 text-left text-sm text-ink hover:border-coral hover:bg-strawberry/40 disabled:opacity-50"
                 >
                   {suggestion}
                 </button>
@@ -165,7 +165,7 @@ export function DestinationChat({ slug, destinationName }: { slug: string; desti
             </div>
           ) : message.role === "assistant" ? (
             <div key={message.id} className="max-w-[92%] animate-fade-up break-words">
-              <div className="rounded-lg rounded-bl-sm border border-line bg-canvas px-3.5 py-3 text-[0.95rem] leading-relaxed text-ink">
+              <div className="rounded-lg rounded-bl-sm border-2 border-line bg-canvas px-3.5 py-3 text-[0.95rem] leading-relaxed text-ink">
                 <span className="sr-only">RegretMap: </span>
                 <p className="whitespace-pre-line">{message.text}</p>
                 {!message.sufficientEvidence && (
@@ -204,7 +204,7 @@ export function DestinationChat({ slug, destinationName }: { slug: string; desti
             <div
               key={message.id}
               role="status"
-              className="flex flex-wrap items-center gap-3 rounded-md border border-line px-3.5 py-2.5 text-sm text-ink-muted"
+              className="flex flex-wrap items-center gap-3 rounded-md border-2 border-line px-3.5 py-2.5 text-sm text-ink-muted"
             >
               <AlertCircle aria-hidden className="size-4 shrink-0 text-accent" />
               <span className="flex-1 whitespace-pre-line">{message.text}</span>
@@ -255,7 +255,7 @@ export function DestinationChat({ slug, destinationName }: { slug: string; desti
             rows={1}
             maxLength={CHAT_LIMITS.questionMax}
             placeholder={`Ask about travelling in ${destinationName}…`}
-            className="max-h-32 min-h-10 min-w-0 flex-1 resize-y rounded-md border border-line bg-card px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
+            className="max-h-32 min-h-10 min-w-0 flex-1 resize-y rounded-md border-2 border-line bg-card px-3 py-2 text-sm text-ink placeholder:text-ink-muted focus:border-black focus:bg-card focus:shadow-[4px_4px_0_0_#000] focus:outline-none"
           />
           <button
             type="submit"

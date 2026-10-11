@@ -72,8 +72,8 @@ export function ReactionBar({
             onClick={() => toggle(type)}
             aria-pressed={active}
             title={label}
-            className={`group inline-flex min-h-9 items-center gap-1 rounded-full border px-2.5 text-sm transition-[transform,background-color,border-color] duration-150 hover:-translate-y-0.5 active:scale-95 ${
-              active ? "border-coral bg-strawberry text-ink" : "border-line bg-card text-ink-muted hover:border-coral"
+            className={`brutal-press group inline-flex min-h-9 items-center gap-1 rounded-full border-2 border-black px-2.5 font-mono text-xs font-bold ${
+              active ? "bg-strawberry text-regret" : "bg-card text-ink"
             }`}
           >
             <span
