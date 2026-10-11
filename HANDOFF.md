@@ -129,6 +129,16 @@ say "saved but isn't public yet"; now stories go live immediately.
 - Search: choosing a place with no stories suggests the nearest destination with stories (≤150 km)
   and "share the first story", instead of listing every destination.
 
+## 2h. Destination photos (2026-10-12)
+
+- `scripts/fetch-destination-images.mjs` → `src/data/destination-images.json` (187 photos): each
+  destination's Wikipedia lead image, kept only if on Wikimedia Commons under CC0/PD/CC BY/CC BY-SA,
+  with author + licence + Commons link. Wrong matches excluded by hand (EXCLUDE set). Re-run with
+  `--missing` after adding destinations. Tested in `src/lib/destination-images.test.ts`.
+- Shown via `next/image` (remotePatterns for upload/thumb.wikimedia.org in `next.config.ts`):
+  hero postcard collage (`HeroCollage`), home destination photo cards, story postcards, destination
+  page header. Every photo shows its credit; no photo → plain pastel panel.
+
 ## 3. Owner must still do (remote, manual)
 
 1. **Apply the Phase 10 migration.** It is NOT on Supabase yet; checked 2026-10-11:

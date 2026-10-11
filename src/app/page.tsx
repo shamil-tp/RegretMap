@@ -4,6 +4,8 @@ import { Suspense } from "react";
 import { CategoryBadge } from "@/components/category-badge";
 import { renderDataError } from "@/components/data-states";
 import { DestinationSearch } from "@/components/destination-search";
+import { DestinationPhoto } from "@/components/destination-photo";
+import { HeroCollage, type CollageItem } from "@/components/hero-collage";
 import { HeroIllustration } from "@/components/hero-illustration";
 import { ShareCallout } from "@/components/share-callout";
 import { buttonClasses } from "@/components/ui/button";
@@ -13,6 +15,7 @@ import {
   listDestinations,
   listStorySummaries,
 } from "@/lib/data";
+import { destinationImage } from "@/lib/destination-images";
 import { formatLocation, pluralize, type StoryWithDestination } from "@/lib/stories";
 
 /*
@@ -51,7 +54,11 @@ export default function HomePage() {
               </Suspense>
             </div>
           </div>
-          <HeroIllustration className="mx-auto hidden w-full max-w-md animate-fade-up md:block" />
+          <div className="hidden md:block">
+            <Suspense fallback={<HeroIllustration className="mx-auto w-full max-w-md" />}>
+              <HeroVisual />
+            </Suspense>
+          </div>
         </div>
       </section>
 
@@ -61,6 +68,28 @@ export default function HomePage() {
 
       <ShareCallout />
     </>
+  );
+}
+
+/** Destinations shown as hero postcards when they have a photo and stories. */
+const HERO_PICKS = ["kyoto", "santorini", "machu-picchu", "hampi", "leh", "rome", "petra", "banff"];
+
+async function HeroVisual() {
+  let destinations: Awaited<ReturnType<typeof listDestinations>> = [];
+  try {
+    destinations = await listDestinations();
+  } catch (error) {
+    if (!(error instanceof DataUnavailableError)) throw error;
+  }
+  const items: CollageItem[] = HERO_PICKS.flatMap((slug) => {
+    const destination = destinations.find((d) => d.slug === slug && d.storyCount > 0);
+    const image = destinationImage(slug);
+    return destination && image ? [{ slug, name: destination.name, image }] : [];
+  });
+  return items.length >= 3 ? (
+    <HeroCollage items={items} />
+  ) : (
+    <HeroIllustration className="mx-auto w-full max-w-md animate-fade-up" />
   );
 }
 
@@ -144,22 +173,31 @@ async function HomeSections() {
             <h2 id="places-heading" className="font-display text-2xl font-semibold tracking-tight text-ink">
               Places with the most lessons
             </h2>
-            <ul className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {top.map((destination) => (
-                <li key={destination.slug}>
-                  <Link
-                    href={`/destinations/${destination.slug}`}
-                    className="group flex h-full flex-col rounded-lg border border-line bg-card p-4 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-coral hover:shadow-md"
-                  >
-                    <span className="flex items-start justify-between gap-2">
-                      <span className="font-semibold text-ink group-hover:text-accent-hover">{destination.name}</span>
-                      <MapPin aria-hidden className="mt-0.5 size-4 shrink-0 text-accent" />
-                    </span>
-                    <span className="mt-0.5 text-sm text-ink-muted">{formatLocation(destination)}</span>
-                    <span className="mt-auto pt-3 text-xs font-medium text-ink-muted">
+            <ul className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+              {top.map((destination, index) => (
+                <li
+                  key={destination.slug}
+                  className="group relative flex animate-fade-up flex-col overflow-hidden rounded-lg border border-line bg-card shadow-sm transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-lg"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <DestinationPhoto
+                    image={destinationImage(destination.slug)}
+                    alt={destination.name}
+                    sizes="(min-width: 1024px) 270px, 50vw"
+                    className="aspect-[4/3]"
+                  />
+                  <div className="flex flex-1 flex-col p-3 sm:p-4">
+                    <Link
+                      href={`/destinations/${destination.slug}`}
+                      className="font-semibold text-ink after:absolute after:inset-0 group-hover:text-accent-hover"
+                    >
+                      {destination.name}
+                    </Link>
+                    <span className="mt-0.5 truncate text-sm text-ink-muted">{formatLocation(destination)}</span>
+                    <span className="mt-auto pt-2 text-xs font-medium text-ink-muted">
                       {pluralize(destination.storyCount, "story", "stories")}
                     </span>
-                  </Link>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -187,7 +225,14 @@ async function HomeSections() {
 
 function StoryPostcard({ story }: { story: StoryWithDestination }) {
   return (
-    <article className="group relative flex h-full flex-col rounded-lg border border-line bg-card p-5 shadow-sm transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md">
+    <article className="group relative flex h-full flex-col overflow-hidden rounded-lg border border-line bg-card shadow-sm transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md">
+      <DestinationPhoto
+        image={destinationImage(story.destination.slug)}
+        alt={story.destination.name}
+        sizes="(min-width: 1024px) 370px, (min-width: 640px) 50vw, 100vw"
+        className="aspect-[16/9]"
+      />
+      <div className="flex flex-1 flex-col p-5">
       <div className="flex flex-wrap items-center gap-2">
         <CategoryBadge category={story.category} />
         {story.source === "editorial" && (
@@ -204,6 +249,7 @@ function StoryPostcard({ story }: { story: StoryWithDestination }) {
         <MapPin aria-hidden className="size-3.5 text-accent" />
         {[story.destination.name, story.destination.country].filter(Boolean).join(", ")}
       </p>
+      </div>
     </article>
   );
 }

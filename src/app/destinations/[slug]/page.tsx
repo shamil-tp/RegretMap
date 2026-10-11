@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { AiRecommendations, AiRecommendationsSkeleton } from "@/components/ai-recommendations";
 import { BeforeYouGo } from "@/components/before-you-go";
 import { ChatLauncher } from "@/components/chat-launcher";
+import { DestinationPhoto } from "@/components/destination-photo";
 import {
   ExplorerSkeleton,
   NoStoriesYet,
@@ -14,6 +15,7 @@ import { ShareCallout } from "@/components/share-callout";
 import { StoryExplorer } from "@/components/story-explorer";
 import { Badge } from "@/components/ui/badge";
 import { buildBeforeYouGo } from "@/lib/before-you-go";
+import { destinationImage } from "@/lib/destination-images";
 import { getDestinationBySlug, getHelpfulState, listStoriesForDestination } from "@/lib/data";
 import { getViewer } from "@/lib/supabase/session";
 import { formatLocation, storyNoun, type Destination } from "@/lib/stories";
@@ -83,32 +85,48 @@ async function DestinationContent({ params }: Pick<Props, "params">) {
 
 function DestinationHeader({ destination }: { destination: Destination }) {
   const location = formatLocation(destination);
+  const image = destinationImage(destination.slug);
   return (
     <section className="border-b border-line bg-sky/50">
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-        <nav aria-label="Breadcrumb" className="text-sm text-ink-muted">
-          <ol className="flex items-center gap-2">
-            <li>
-              <Link href="/" className="rounded hover:text-ink">
-                Explore
-              </Link>
-            </li>
-            <li aria-hidden>/</li>
-            <li aria-current="page" className="text-ink">
-              {destination.name}
-            </li>
-          </ol>
-        </nav>
+      <div
+        className={`mx-auto grid max-w-6xl gap-6 px-4 py-8 sm:px-6 sm:py-12 ${
+          image ? "md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-center md:gap-10" : ""
+        }`}
+      >
+        <div className="animate-fade-up">
+          <nav aria-label="Breadcrumb" className="text-sm text-ink-muted">
+            <ol className="flex items-center gap-2">
+              <li>
+                <Link href="/" className="rounded hover:text-ink">
+                  Home
+                </Link>
+              </li>
+              <li aria-hidden>/</li>
+              <li aria-current="page" className="text-ink">
+                {destination.name}
+              </li>
+            </ol>
+          </nav>
 
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <h1 className="font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-            {destination.name}
-          </h1>
-          {destination.isDemo && <Badge tone="demo">Demo destination</Badge>}
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <h1 className="font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+              {destination.name}
+            </h1>
+            {destination.isDemo && <Badge tone="demo">Demo destination</Badge>}
+          </div>
+          {location && <p className="mt-1 text-ink-muted">{location}</p>}
+          {destination.description && (
+            <p className="mt-4 max-w-2xl leading-relaxed text-ink">{destination.description}</p>
+          )}
         </div>
-        {location && <p className="mt-1 text-ink-muted">{location}</p>}
-        {destination.description && (
-          <p className="mt-4 max-w-2xl leading-relaxed text-ink">{destination.description}</p>
+        {image && (
+          <DestinationPhoto
+            image={image}
+            alt={`${destination.name}${location ? `, ${location}` : ""}`}
+            sizes="(min-width: 768px) 560px, 100vw"
+            priority
+            className="order-first aspect-[16/9] animate-fade-up rounded-xl shadow-md ring-1 ring-line md:order-none md:aspect-[4/3]"
+          />
         )}
       </div>
     </section>
