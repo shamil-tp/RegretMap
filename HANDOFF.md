@@ -119,6 +119,16 @@ say "saved but isn't public yet"; now stories go live immediately.
   re-run `supabase/seed_world_editorial.sql` (idempotent) to add the new ones.
 - Gemini: up to 10 keys tried per request; GEMINI_API_KEY5+ picked up automatically.
 
+## 2g. Home redesign (2026-10-12)
+
+- `/` is now a search-first travel-journal home (SVG `HeroIllustration`, latest real stories,
+  top destinations by real counts, map CTA). No AI, no Leaflet on home (guarded by
+  `src/lib/home-no-ai.test.ts`). Home HTML 383 KB → 132 KB.
+- Map explorer + country filter moved to `/explore` (`src/app/explore/page.tsx`); nav says "Explore map".
+- Destination chat loads on demand via `ChatLauncher` (next/dynamic, ssr:false).
+- Search: choosing a place with no stories suggests the nearest destination with stories (≤150 km)
+  and "share the first story", instead of listing every destination.
+
 ## 3. Owner must still do (remote, manual)
 
 1. **Apply the Phase 10 migration.** It is NOT on Supabase yet; checked 2026-10-11:

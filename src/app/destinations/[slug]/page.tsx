@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { AiRecommendations, AiRecommendationsSkeleton } from "@/components/ai-recommendations";
 import { BeforeYouGo } from "@/components/before-you-go";
-import { DestinationChat } from "@/components/destination-chat";
+import { ChatLauncher } from "@/components/chat-launcher";
 import {
   ExplorerSkeleton,
   NoStoriesYet,
@@ -170,7 +170,7 @@ async function DestinationStories({ destination }: { destination: Destination })
       </div>
 
       <div className="mx-auto max-w-3xl px-4 pb-12 sm:px-6">
-        <DestinationChat slug={destination.slug} destinationName={destination.name} />
+        <ChatLauncher slug={destination.slug} destinationName={destination.name} />
       </div>
     </>
   );

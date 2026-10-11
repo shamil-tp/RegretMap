@@ -7,7 +7,7 @@ import { getViewer, type Viewer } from "@/lib/supabase/session";
 
 function linksFor(viewer: Viewer | null) {
   return [
-    { href: "/", label: "Explore" },
+    { href: "/explore", label: "Explore map" },
     ...(viewer?.isModerator ? [{ href: "/moderate", label: "Moderate" }] : []),
     viewer ? { href: "/account", label: "Account" } : { href: "/auth/sign-in", label: "Sign in" },
     { href: "/submit", label: "Share an experience" },

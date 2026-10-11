@@ -1,0 +1,202 @@
+import { ChevronRight } from "lucide-react";
+import type { Metadata } from "next";
+import Link from "next/link";
+import { Suspense } from "react";
+import {
+  ExplorerSkeleton,
+  NoStoriesYet,
+  renderDataError,
+} from "@/components/data-states";
+import { DestinationSearch } from "@/components/destination-search";
+import { ShareCallout } from "@/components/share-callout";
+import { CountryFilter } from "@/components/country-filter";
+import { StoryExplorer } from "@/components/story-explorer";
+import {
+  DataUnavailableError,
+  getHelpfulState,
+  getStoriesByIds,
+  type DestinationSummary,
+  listCountries,
+  listDestinations,
+  listStorySummaries,
+} from "@/lib/data";
+import { defaultStoryFilters, filterAndSortStories } from "@/lib/story-filtering";
+import { getViewer } from "@/lib/supabase/session";
+import { formatLocation, pluralize, storyNoun } from "@/lib/stories";
+
+const FEATURED_DESTINATIONS = 10;
+/** Cards rendered on the server; more load 10 at a time from the browser. */
+const FIRST_PAGE = 10;
+
+export const metadata: Metadata = {
+  title: "Explore the map — RegretMap",
+  description: "Browse travel stories and lessons on a map, filtered by country and category.",
+};
+
+export default function ExplorePage({ searchParams }: PageProps<"/explore">) {
+  return (
+    <>
+      <section className="border-b border-line bg-sky/40">
+        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+          <h1 className="animate-fade-up font-display text-3xl font-semibold tracking-tight text-ink">
+            Explore the map
+          </h1>
+          <p className="mt-2 max-w-xl text-ink-muted">
+            Every pin is a story. Pick a country, filter by what went wrong, or jump to a place.
+          </p>
+          <div className="relative z-10 mt-5 max-w-xl">
+            <Suspense fallback={<div className="h-11 animate-pulse rounded-full bg-surface" />}>
+              <SearchWithDestinations />
+            </Suspense>
+          </div>
+        </div>
+      </section>
+
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+        <Suspense fallback={<ExplorerSkeleton />}>
+          <ExploreContent searchParams={searchParams} />
+        </Suspense>
+      </div>
+
+      <ShareCallout />
+    </>
+  );
+}
+
+async function SearchWithDestinations() {
+  let destinations: Awaited<ReturnType<typeof listDestinations>> = [];
+  try {
+    destinations = await listDestinations();
+  } catch (error) {
+    // Place autocomplete still works without RegretMap destinations.
+    if (!(error instanceof DataUnavailableError)) throw error;
+  }
+  return (
+    <DestinationSearch
+      destinations={destinations.map(
+        ({ slug, name, region, country, storyCount, isDemo, coordinates }) => ({
+          slug,
+          name,
+          region,
+          country,
+          storyCount,
+          isDemo,
+          coordinates,
+        }),
+      )}
+    />
+  );
+}
+
+async function ExploreContent({ searchParams }: { searchParams: PageProps<"/explore">["searchParams"] }) {
+  const requested = (await searchParams).country;
+  let destinations, countries, totalCount;
+  try {
+    [destinations, countries] = await Promise.all([listDestinations(), listCountries()]);
+    totalCount = destinations.reduce((sum, d) => sum + d.storyCount, 0);
+  } catch (error) {
+    return renderDataError(error);
+  }
+  // Only a country that actually has stories is accepted from the URL.
+  const country =
+    typeof requested === "string" && countries.some((c) => c.country === requested) ? requested : null;
+
+  let stories, firstPage;
+  try {
+    stories = await listStorySummaries(country ?? undefined);
+    // The first page of cards is rendered on the server; the rest load on demand.
+    const firstIds = filterAndSortStories(stories, defaultStoryFilters)
+      .slice(0, FIRST_PAGE)
+      .map((s) => s.id);
+    firstPage = await getStoriesByIds(firstIds);
+  } catch (error) {
+    return renderDataError(error);
+  }
+  if (stories.length === 0) return <NoStoriesYet />;
+  const viewer = await getViewer();
+  const helpful = await getHelpfulState(firstPage.map((s) => s.id), viewer?.id ?? null);
+
+  // Most-documented destinations first (within the chosen country); the rest stay one click away.
+  const byStories = destinations
+    .filter((d) => d.storyCount > 0 && (!country || d.country === country))
+    .sort((a, b) => b.storyCount - a.storyCount || a.name.localeCompare(b.name));
+  const featured = byStories.slice(0, FEATURED_DESTINATIONS);
+  const rest = byStories.slice(FEATURED_DESTINATIONS);
+
+  return (
+    <>
+      {/* Stacks on phones; one row from sm up. min-w-0 lets the filter shrink inside the card. */}
+      <div className="mb-8 flex flex-col gap-2 rounded-lg border border-line bg-card px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <CountryFilter countries={countries} selected={country} totalCount={totalCount} />
+        <p className="shrink-0 text-sm text-ink-muted">
+          {country ? `${pluralize(stories.length, "story", "stories")} from ${country}` : `${countries.length} countries`}
+        </p>
+      </div>
+      <StoryExplorer
+        key={country ?? "all"}
+        stories={stories}
+        cards={firstPage}
+        mapHeading={country ? `Stories in ${country}` : "Explore the map"}
+        storiesHeading={country ? `Stories and travel notes from ${country}` : "Stories and travel notes"}
+        fitMapToStories={Boolean(country)}
+        enableLocationPicker
+        helpful={helpful}
+        aside={
+          <>
+            <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-ink-muted">
+              Destinations{country ? ` in ${country}` : ""}
+            </h2>
+            <DestinationList destinations={featured} />
+            {rest.length > 0 && (
+              <details className="mt-1">
+                <summary className="cursor-pointer rounded py-2 text-sm font-medium text-accent hover:underline">
+                  More destinations ({rest.length})
+                </summary>
+                {/* Compact on purpose: this list can run to hundreds of places. */}
+                <ul className="flex flex-wrap gap-x-3 gap-y-1.5 pb-2 text-sm">
+                  {rest.map((destination) => (
+                    <li key={destination.slug}>
+                      <Link
+                        href={`/destinations/${destination.slug}`}
+                        prefetch={false}
+                        className="rounded text-ink hover:text-accent-hover hover:underline"
+                      >
+                        {destination.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </>
+        }
+      />
+    </>
+  );
+}
+
+function DestinationList({ destinations }: { destinations: DestinationSummary[] }) {
+  return (
+    <ul className="mt-2 divide-y divide-line">
+      {destinations.map((destination) => (
+        <li key={destination.slug}>
+          <Link
+            href={`/destinations/${destination.slug}`}
+            className="group flex items-center justify-between gap-4 rounded py-3"
+          >
+            <span>
+              <span className="font-medium text-ink group-hover:text-accent-hover">
+                {destination.name}
+              </span>
+              <span className="block text-sm text-ink-muted">{formatLocation(destination)}</span>
+            </span>
+            <span className="flex shrink-0 items-center gap-1 text-sm text-ink-muted">
+              {storyNoun(destination.storyCount, destination.isDemo)}
+              <ChevronRight aria-hidden className="size-4" />
+            </span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}

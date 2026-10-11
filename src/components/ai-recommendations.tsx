@@ -44,7 +44,7 @@ export async function AiRecommendations({
     <div className="mt-6">
       <div className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
         <span>
-          Summarised from {pluralize(data.storyCount, "published story", "published stories")}
+          AI summary of {pluralize(data.storyCount, "published story", "published stories")} — each tip links to its sources
         </span>
         {data.fromDemo && <Badge tone="demo">Generated from demo example stories</Badge>}
       </div>

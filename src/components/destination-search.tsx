@@ -1,7 +1,9 @@
 "use client";
 
 import { ArrowRight, Loader2, MapPin, Search, X } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { nearestWithin } from "@/lib/geo";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { buttonClasses } from "@/components/ui/button";
 import {
@@ -28,10 +30,18 @@ type Option =
  * listed first and open their page; other places come from the place-search
  * provider and are clearly marked as having no stories yet.
  */
+/** How far away a destination with stories can be to be suggested for a chosen place. */
+const NEARBY_KM = 150;
+
 export function DestinationSearch({
   destinations,
+  placeholder = "Where are you heading?",
+  size = "md",
 }: {
   destinations: SearchableDestination[];
+  placeholder?: string;
+  /** "lg" for the home page hero. */
+  size?: "md" | "lg";
 }) {
   const router = useRouter();
   const listId = useId();
@@ -44,6 +54,8 @@ export function DestinationSearch({
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [statusMessage, setStatusMessage] = useState("");
+  /** Closest destination with stories to a chosen place that has none. */
+  const [nearby, setNearby] = useState<{ slug: string; name: string; km: number } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -106,6 +118,7 @@ export function DestinationSearch({
     setQuery(next);
     setActiveIndex(-1);
     setStatusMessage("");
+    setNearby(null);
     setIsOpen(next.trim().length > 0);
     if (next.trim().length < PLACE_QUERY_MIN) {
       setPlaces([]);
@@ -124,12 +137,13 @@ export function DestinationSearch({
     }
     const { place } = option;
     setQuery(place.name);
-    setStatusMessage(
-      `There are no stories for ${place.name}${place.context ? ` (${place.context})` : ""} yet. ` +
-        (destinations.length > 0
-          ? `Stories currently exist for: ${destinations.map((d) => d.name).join(", ")}.`
-          : "No destinations have stories yet."),
+    const closest = nearestWithin(
+      destinations.filter((d) => (d.storyCount ?? 0) > 0),
+      { latitude: place.latitude, longitude: place.longitude },
+      NEARBY_KM,
     );
+    setNearby(closest ? { slug: closest.item.slug, name: closest.item.name, km: Math.round(closest.km) } : null);
+    setStatusMessage(`No stories for ${place.name}${place.context ? ` (${place.context})` : ""} yet.`);
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
@@ -254,10 +268,12 @@ export function DestinationSearch({
               onChange={handleInputChange}
               onFocus={() => trimmed && setIsOpen(true)}
               onKeyDown={handleKeyDown}
-              placeholder="Try Manali, Munnar or Jaipur"
+              placeholder={placeholder}
               maxLength={PLACE_QUERY_MAX}
               autoComplete="off"
-              className="w-full rounded-full border border-line bg-card py-3 pl-10 pr-10 text-sm text-ink shadow-sm placeholder:text-ink-muted focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
+              className={`w-full rounded-full border border-line bg-card pl-10 pr-10 text-ink shadow-sm transition-[box-shadow,border-color] duration-200 placeholder:text-ink-muted focus:border-coral focus:shadow-md focus:outline-none focus:ring-4 focus:ring-coral/20 ${
+                size === "lg" ? "py-4 text-base sm:text-lg" : "py-3 text-sm"
+              }`}
             />
             <div className="absolute right-2.5 top-1/2 flex -translate-y-1/2 items-center">
               {isLoading ? (
@@ -329,6 +345,24 @@ export function DestinationSearch({
 
       <p aria-live="polite" className="mt-2 min-h-5 text-sm text-ink-muted">
         {statusMessage}
+        {statusMessage && nearby && (
+          <>
+            {" "}
+            <Link href={`/destinations/${nearby.slug}`} className="font-medium text-accent hover:underline">
+              See {nearby.name}
+            </Link>{" "}
+            ({nearby.km} km away) or
+          </>
+        )}
+        {statusMessage && (
+          <>
+            {" "}
+            <Link href="/submit" className="font-medium text-accent hover:underline">
+              share the first story
+            </Link>
+            .
+          </>
+        )}
       </p>
     </div>
   );

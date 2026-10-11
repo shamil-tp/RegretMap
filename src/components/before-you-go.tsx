@@ -28,7 +28,7 @@ export function BeforeYouGo({
         </h2>
         {fromDemo && <Badge tone="demo">Derived from demo stories</Badge>}
       </div>
-      <p className="mt-1 text-base text-ink">Little lessons from travellers who&apos;ve been there.</p>
+      <p className="mt-1 text-base text-ink">Lessons shared by travellers who have been there.</p>
       <p className="mt-1 max-w-2xl text-sm text-ink-muted">
         {hasEditorial
           ? "Drawn from travellers' stories and RegretMap travel notes about "
