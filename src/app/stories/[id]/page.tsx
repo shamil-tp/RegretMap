@@ -18,6 +18,7 @@ import { countComments } from "@/lib/comments";
 import { getStoryComments } from "@/lib/comments-data";
 import { getViewer } from "@/lib/supabase/session";
 import { storiesToMapPoints } from "@/lib/map";
+import { breadcrumbJsonLd, jsonLdScript, NO_INDEX, OG_IMAGE } from "@/lib/site";
 import {
   formatPublishedDate,
   formatTravelDate,
@@ -30,16 +31,34 @@ type Props = PageProps<"/stories/[id]">;
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
     const story = await getStoryById((await params).id);
-    if (!story) return { title: "Story not found — RegretMap" };
+    if (!story) return { title: "Story not found", robots: NO_INDEX };
+    const path = `/stories/${story.id}`;
+    const title = `${story.title} — ${story.destination.name}`;
+    const description = storyDescription(story);
     return {
-      title: `${story.title} — ${story.destination.name} — RegretMap`,
-      description: story.lesson ?? story.body.slice(0, 150),
-      alternates: { canonical: `/stories/${story.id}` },
-      openGraph: { type: "article", title: story.title, publishedTime: story.publishedAt },
+      title,
+      description,
+      alternates: { canonical: path },
+      openGraph: {
+        type: "article",
+        url: path,
+        title,
+        description,
+        publishedTime: story.publishedAt,
+        images: [OG_IMAGE],
+      },
+      // Demo stories are illustrations, not real experiences.
+      robots: story.isDemo ? NO_INDEX : undefined,
     };
   } catch {
-    return { title: "RegretMap" };
+    return { title: "Story", robots: NO_INDEX };
   }
+}
+
+/** The story's own lesson (or opening) as a search snippet, whitespace-collapsed and trimmed. */
+function storyDescription(story: StoryWithDestination) {
+  const text = (story.lesson ?? story.body).replace(/\s+/g, " ").trim();
+  return text.length > 160 ? `${text.slice(0, 157).trimEnd()}…` : text;
 }
 
 function StorySection({ title, children }: { title: string; children: React.ReactNode }) {
@@ -97,8 +116,15 @@ async function StoryContent({ params }: Pick<Props, "params">) {
   const viewer = await getViewer();
   const helpful = await getHelpfulState([story.id], viewer?.id ?? null);
 
+  const breadcrumbs = breadcrumbJsonLd([
+    ["Home", "/"],
+    [story.destination.name, `/destinations/${story.destination.slug}`],
+    [story.title, `/stories/${story.id}`],
+  ]);
+
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbs) }} />
       <Link
         href={`/destinations/${story.destination.slug}`}
         className="inline-flex items-center gap-1 rounded text-sm text-ink-muted hover:text-ink"

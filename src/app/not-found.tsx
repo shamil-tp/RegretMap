@@ -1,7 +1,11 @@
 import { MapPinOff } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { buttonClasses } from "@/components/ui/button";
 import { StateMessage } from "@/components/ui/state-message";
+import { NO_INDEX } from "@/lib/site";
+
+export const metadata: Metadata = { title: "Page not found", robots: NO_INDEX };
 
 export default function NotFound() {
   return (

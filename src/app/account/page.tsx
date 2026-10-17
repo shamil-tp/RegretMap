@@ -8,8 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 import { formatPublishedDate } from "@/lib/stories";
 import { createSessionClient, getViewer } from "@/lib/supabase/session";
+import { NO_INDEX } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Your account — RegretMap" };
+export const metadata: Metadata = { title: "Your account", robots: NO_INDEX };
 
 export default function AccountPage() {
   return (

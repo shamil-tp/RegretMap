@@ -5,9 +5,12 @@ import { Suspense } from "react";
 import { SubmitFlow } from "@/components/submit/submit-flow";
 import { StateMessage } from "@/components/ui/state-message";
 import { DataUnavailableError, listDestinations } from "@/lib/data";
+import { NO_INDEX } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Share an experience — RegretMap",
+  title: "Share an experience",
+  // A form, not content: keep it out of search results.
+  robots: NO_INDEX,
   description:
     "Share what happened on your trip, what you'd do differently and advice for future travellers.",
 };

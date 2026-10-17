@@ -26,7 +26,11 @@ const nextConfig: NextConfig = {
     ];
   },
   async redirects() {
-    return [{ source: "/explore", destination: "/", permanent: true }];
+    return [
+      { source: "/explore", destination: "/", permanent: true },
+      // The old static about page became the /about route.
+      { source: "/index.html", destination: "/about", permanent: true },
+    ];
   },
   partialPrefetching: true,
   turbopack: {

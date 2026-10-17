@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { InstallAppButton } from "@/components/pwa/install-app-button";
+import { CREATORS } from "@/lib/site";
 
 export function SiteFooter() {
   return (
@@ -14,15 +16,18 @@ export function SiteFooter() {
           information.
         </p>
         <p className="mt-2">
-          {/* Static about page in public/; a plain <a>, not a Next route. */}
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          <a href="/index.html" className="underline hover:text-ink">
+          <Link href="/about" className="underline hover:text-ink">
             About RegretMap
-          </a>{" "}
+          </Link>{" "}
           · Built by{" "}
-          <a href="https://github.com/shamil-tp" rel="author" className="underline hover:text-ink">
-            Shamil TP
-          </a>
+          {CREATORS.map((c, i) => (
+            <span key={c.id}>
+              {i > 0 && " and "}
+              <a href={c.url} rel="author" className="underline hover:text-ink">
+                {c.name}
+              </a>
+            </span>
+          ))}
         </p>
         <InstallAppButton className="mt-4" />
       </div>

@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AuthForm } from "@/components/auth/auth-form";
 import { safeNextPath } from "@/lib/auth-redirect";
+import { NO_INDEX } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Sign in — RegretMap" };
+export const metadata: Metadata = { title: "Sign in", robots: NO_INDEX };
 
 export default function SignInPage({ searchParams }: PageProps<"/auth/sign-in">) {
   return (

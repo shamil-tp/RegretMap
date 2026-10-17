@@ -4,8 +4,9 @@ import { Suspense } from "react";
 import { ModerationItem, type QueueItem } from "@/components/moderation-item";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getViewer } from "@/lib/supabase/session";
+import { NO_INDEX } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Moderation — RegretMap", robots: { index: false } };
+export const metadata: Metadata = { title: "Moderation", robots: NO_INDEX };
 
 export default function ModeratePage() {
   return (

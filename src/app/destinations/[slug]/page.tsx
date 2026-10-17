@@ -16,23 +16,50 @@ import { Badge } from "@/components/ui/badge";
 import { buildBeforeYouGo } from "@/lib/before-you-go";
 import { getCommentCounts, getDestinationBySlug, getHelpfulState, listStoriesForDestination } from "@/lib/data";
 import { getViewer } from "@/lib/supabase/session";
-import { formatLocation, storyNoun, type Destination } from "@/lib/stories";
+import { breadcrumbJsonLd, jsonLdScript, NO_INDEX, OG_IMAGE } from "@/lib/site";
+import {
+  formatLocation,
+  storyCategories,
+  storyNoun,
+  type Destination,
+  type StoryWithDestination,
+} from "@/lib/stories";
 
 type Props = PageProps<"/destinations/[slug]">;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
     const destination = await getDestinationBySlug((await params).slug);
-    if (!destination) return { title: "Destination not found — RegretMap" };
-    const location = formatLocation(destination);
+    if (!destination) return { title: "Destination not found", robots: NO_INDEX };
+    const stories = await listStoriesForDestination(destination.id);
+    const path = `/destinations/${destination.slug}`;
+    const title = `${destination.name} travel lessons and mistakes`;
+    const description = destinationDescription(destination, stories);
     return {
-      title: `${destination.name} travel lessons — RegretMap`,
-      description: `Traveller experiences, mistakes and practical lessons from ${destination.name}${location ? `, ${location}` : ""}.`,
-      alternates: { canonical: `/destinations/${destination.slug}` },
+      title,
+      description,
+      alternates: { canonical: path },
+      openGraph: { type: "website", url: path, title, description, images: [OG_IMAGE] },
+      // A destination without stories has nothing to read yet.
+      robots: stories.length === 0 || destination.isDemo ? NO_INDEX : undefined,
     };
   } catch {
-    return { title: "RegretMap" };
+    return { title: "Destination", robots: NO_INDEX };
   }
+}
+
+/** Search snippet built from the destination's own text and its published stories. */
+function destinationDescription(destination: Destination, stories: StoryWithDestination[]) {
+  const location = formatLocation(destination);
+  const place = location ? `${destination.name}, ${location}` : destination.name;
+  const lead = destination.description?.trim();
+  const count = storyNoun(stories.length, stories.some((s) => s.isDemo));
+  const topics = [...new Set(stories.map((s) => storyCategories[s.category].toLowerCase()))].slice(0, 3);
+  const about = topics.length > 0 ? ` about ${topics.join(", ")}` : "";
+  const text = lead
+    ? `${lead} ${count}${about} from ${destination.name}.`
+    : `${count}${about} from ${place}: what went wrong and what travellers would do differently.`;
+  return text.length > 300 ? `${text.slice(0, 297).trimEnd()}…` : text;
 }
 
 const shortMonth = new Intl.DateTimeFormat("en", { month: "short", timeZone: "UTC" });
@@ -84,8 +111,13 @@ async function DestinationContent({ params }: Pick<Props, "params">) {
 
 function DestinationHeader({ destination }: { destination: Destination }) {
   const location = formatLocation(destination);
+  const breadcrumbs = breadcrumbJsonLd([
+    ["Home", "/"],
+    [destination.name, `/destinations/${destination.slug}`],
+  ]);
   return (
     <section className="border-b-[2.5px] border-black bg-sky">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbs) }} />
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
         <div className="animate-fade-up">
           <nav aria-label="Breadcrumb" className="text-sm text-ink-muted">

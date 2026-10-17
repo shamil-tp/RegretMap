@@ -7,6 +7,7 @@ import { HeroIllustration } from "@/components/hero-illustration";
 import { ShareCallout } from "@/components/share-callout";
 import { DataUnavailableError, listDestinations } from "@/lib/data";
 import { destinationImage } from "@/lib/destination-images";
+import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/site";
 import { pluralize } from "@/lib/stories";
 
 /*
@@ -19,7 +20,12 @@ import { pluralize } from "@/lib/stories";
  * (Enforced by src/lib/home-no-ai.test.ts.)
  */
 
-export const metadata: Metadata = { alternates: { canonical: "/" } };
+// Filtered views (?country=) canonicalise to the home page itself.
+export const metadata: Metadata = {
+  title: { absolute: `${SITE_NAME} — Real travel experiences and lessons` },
+  description: SITE_DESCRIPTION,
+  alternates: { canonical: "/" },
+};
 
 /** Destinations shown as hero postcards (each must have a real photo and stories). */
 const HERO_PICKS = ["kyoto", "machu-picchu", "hampi", "leh", "rome", "petra", "banff"];

@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AuthForm } from "@/components/auth/auth-form";
 import { safeNextPath } from "@/lib/auth-redirect";
+import { NO_INDEX } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Create an account — RegretMap" };
+export const metadata: Metadata = { title: "Create an account", robots: NO_INDEX };
 
 export default function SignUpPage({ searchParams }: PageProps<"/auth/sign-up">) {
   return (
