@@ -1,0 +1,93 @@
+REGRETMAP — HOW TO PRESENT (2 MINUTES)
+======================================
+Deck: https://claude.ai/artifact/CUJURNy2G7GGhQ6xZvVDh6  (6 slides)
+Speak slowly and clearly. Total: about 2 minutes.
+
+
+BEFORE YOU START
+----------------
+- Open the deck and press Present (full screen). Use the arrow keys to move.
+- Keep the live site open in another tab: https://regret-map.shamiltp.me
+- Sign in to the demo account beforehand if you plan to show it.
+- Practise once with a timer.
+
+
+SLIDE 1 — COVER (about 15 seconds)
+----------------------------------
+SAY:
+"Hi, this is RegretMap. Travel smarter, regret less.
+It's a community map of travel mistakes, so the next traveller
+doesn't repeat them."
+
+
+SLIDE 2 — THE PROBLEM (about 20 seconds)
+----------------------------------------
+SAY:
+"Travel sites are great at rating hotels and restaurants.
+But the mistakes that actually ruin a trip are hard to find:
+going on the wrong day, like the Taj Mahal on a Friday when it's closed,
+the wrong season, or packing too much into one day."
+
+
+SLIDE 3 — HOW IT WORKS (about 20 seconds)
+-----------------------------------------
+SAY:
+"It's simple. Search any place.
+See every story pinned on a map, with a heatmap.
+Read the lessons, react and reply in threads.
+And ask questions about that destination."
+
+
+SLIDE 4 — AI THAT DOESN'T MAKE THINGS UP (about 25 seconds)
+-----------------------------------------------------------
+SAY:
+"This is the part we're proudest of: the AI doesn't hallucinate.
+It only uses real published stories.
+Every tip links to its sources, it never invents prices or numbers,
+and if no story covers your question, it honestly says so.
+For a full trip plan, it points you to The Visa Guy."
+
+
+SLIDE 5 — WHAT WE BUILT (about 20 seconds)
+------------------------------------------
+SAY:
+"We added 329 travel lessons across 53 countries, including every
+Indian state. It's built with Next.js, Supabase with row-level security,
+Leaflet maps and Google Gemini. It installs as an app on your phone,
+and it's covered by over 300 automated tests."
+
+
+SLIDE 6 — CLOSE (about 10 seconds)
+----------------------------------
+SAY:
+"Every journey leaves a lesson. RegretMap makes sure you learn it
+before you go. Try it at regret-map.shamiltp.me. Thank you!"
+
+
+TIPS
+----
+- Look at the audience, not the screen.
+- One idea per slide: don't read every word on the slide.
+- If you're running long, shorten slide 5 to the three big numbers.
+- If time allows a quick demo: search "Kyoto", open a story,
+  then click "Ask a question" on the destination page.
+
+
+IF THEY ASK QUESTIONS
+---------------------
+Q: Are the stories real?
+A: Community stories are from real users. Our team-written travel notes
+   are clearly labelled "Travel note", never shown as personal experiences.
+
+Q: How do you stop the AI from hallucinating?
+A: The server checks every answer: sources must be real stories for that
+   destination, numbers must appear in those stories, and answers without
+   a source are replaced with an honest "not covered" message.
+
+Q: What if the AI is down?
+A: We rotate between several API keys. If all fail, the site still works
+   and the chat shows the most related stories instead.
+
+Q: Is user data safe?
+A: Every database table has row-level security, secret keys stay on the
+   server, and people's emails are never shown publicly.

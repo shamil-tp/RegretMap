@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { ExplorerSkeleton } from "@/components/data-states";
 import { ExploreContent, SearchWithDestinations } from "@/components/explore-section";
@@ -17,6 +18,8 @@ import { pluralize } from "@/lib/stories";
  * the chat load only on a destination page, after a place is chosen.
  * (Enforced by src/lib/home-no-ai.test.ts.)
  */
+
+export const metadata: Metadata = { alternates: { canonical: "/" } };
 
 /** Destinations shown as hero postcards (each must have a real photo and stories). */
 const HERO_PICKS = ["kyoto", "machu-picchu", "hampi", "leh", "rome", "petra", "banff"];

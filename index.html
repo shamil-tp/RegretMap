@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RegretMap by Shamil TP &amp; Nihal T — Travel smarter. Regret less.</title>
+<meta name="description" content="RegretMap by Shamil TP and Nihal T: a community map of real travel mistakes and lessons. How it works, AI that only answers from real stories, tech stack, security and setup.">
+<meta name="keywords" content="Shamil TP, Nihal T, RegretMap, Regret Map, Shamil TP Nihal T, travel mistakes, travel lessons, travel regrets, community travel map">
+<meta name="author" content="Shamil TP, Nihal T">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#F7F6F2">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="RegretMap">
+<meta property="og:title" content="RegretMap by Shamil TP &amp; Nihal T — Travel smarter. Regret less.">
+<meta property="og:description" content="A community map of real travel mistakes and lessons, built by Shamil TP and Nihal T.">
+<meta property="og:image" content="https://regret-map.shamiltp.me/pwa-icon/512.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="RegretMap by Shamil TP &amp; Nihal T">
+<meta name="twitter:description" content="A community map of real travel mistakes and lessons, built by Shamil TP and Nihal T.">
+<link rel="icon" type="image/png" href="https://regret-map.shamiltp.me/pwa-icon/192.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "name": "RegretMap",
+      "url": "https://regret-map.shamiltp.me",
+      "applicationCategory": "TravelApplication",
+      "operatingSystem": "Any (web, installable PWA)",
+      "description": "A community map of real travel mistakes and lessons. Search a destination, read travellers' stories, and get a Before-you-go summary grounded only in those stories.",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "author": [{ "@id": "#shamil-tp" }, { "@id": "#nihal-t" }],
+      "codeRepository": "https://github.com/shamil-tp/RegretMap"
+    },
+    { "@type": "Person", "@id": "#shamil-tp", "name": "Shamil TP", "alternateName": ["Shamil T P", "shamil-tp"], "sameAs": ["https://github.com/shamil-tp", "https://www.linkedin.com/in/shamil-tp/"] },
+    { "@type": "Person", "@id": "#nihal-t", "name": "Nihal T", "alternateName": ["Nihal T.", "MrNihalT"], "sameAs": ["https://github.com/MrNihalT", "https://www.linkedin.com/in/mrnihalt/"] }
+  ]
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+  :root {
+    --paper: #F7F6F2; --white: #FFFFFF; --ink: #141414; --muted: #4A4A4A; --muted-dark: #BDBDBD;
+    --red: #FF3B30; --red-text: #C42B22; --blue: #0055FF; --yellow: #FFD600; --mint: #00E599;
+    --border: 3px solid var(--ink); --radius: 20px;
+    --shadow: 6px 6px 0 var(--ink); --shadow-sm: 4px 4px 0 var(--ink);
+    --display: "Space Grotesk", Arial, system-ui, sans-serif;
+    --body: "IBM Plex Sans", Arial, system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+  body {
+    margin: 0; color: var(--ink); font: 400 18px/1.6 var(--body);
+    background: var(--paper) radial-gradient(rgba(0,0,0,.08) 1px, transparent 1px) 0 0 / 24px 24px;
+  }
+  a { color: inherit; }
+  h1, h2, h3 { font-family: var(--display); font-weight: 700; margin: 0; letter-spacing: -.02em; line-height: 1.1; }
+  p { margin: 0; }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 16px; }
+  @media (min-width: 640px) { .wrap { padding: 0 32px; } }
+
+  /* header */
+  header { position: sticky; top: 0; z-index: 10; background: var(--white); border-bottom: var(--border); }
+  header .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 68px; }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font: 700 22px var(--display); }
+  .badge { background: var(--red); color: #fff; border: var(--border); border-radius: 10px; padding: 0 8px; box-shadow: 3px 3px 0 var(--ink); font-size: 16px; line-height: 28px; }
+  nav { display: none; gap: 24px; font: 500 15px var(--display); }
+  nav a { text-decoration: none; }
+  nav a:hover { color: var(--red-text); }
+  @media (min-width: 900px) { nav { display: flex; } }
+
+  .btn {
+    display: inline-block; padding: 12px 24px; border: var(--border); border-radius: 999px;
+    font: 700 17px var(--display); text-decoration: none; box-shadow: var(--shadow-sm);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .btn:hover { transform: translate(-2px,-2px); box-shadow: var(--shadow); }
+  .btn:active { transform: translate(4px,4px); box-shadow: none; }
+  .btn-yellow { background: var(--yellow); }
+  .btn-white { background: var(--white); }
+  header .btn { padding: 8px 18px; font-size: 15px; }
+
+  /* sections */
+  section { padding: 72px 0; }
+  @media (min-width: 900px) { section { padding: 104px 0; } }
+  .eyebrow { font: 700 15px var(--display); letter-spacing: 2px; text-transform: uppercase; color: var(--red-text); margin-bottom: 12px; }
+  .title { font-size: clamp(34px, 5.5vw, 60px); max-width: 20ch; margin-bottom: 40px; }
+  .lead { font-size: 18px; color: var(--muted); max-width: 68ch; margin-top: 28px; }
+  .dark { background: var(--ink); color: var(--paper); }
+  .dark .eyebrow { color: var(--yellow); }
+  .dark .lead { color: var(--muted-dark); }
+  .white { background: var(--white); border-top: var(--border); border-bottom: var(--border); }
+
+  .grid { display: grid; gap: 24px; grid-template-columns: 1fr; }
+  @media (min-width: 640px) { .g2, .g3, .g4 { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 960px) { .g3 { grid-template-columns: repeat(3, 1fr); } .g4 { grid-template-columns: repeat(4, 1fr); } }
+
+  .card { background: var(--white); color: var(--ink); border: var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px; display: flex; flex-direction: column; gap: 10px; }
+  .card h3 { font-size: 24px; }
+  .card p { color: var(--muted); font-size: 17px; }
+  .path { font: 500 15px var(--mono); color: var(--blue); }
+  .big { font: 700 clamp(56px, 8vw, 80px)/1 var(--display); letter-spacing: -.03em; }
+
+  /* hero */
+  .hero { padding: 56px 0 72px; }
+  .hero .wrap { display: grid; gap: 48px; align-items: center; }
+  @media (min-width: 900px) { .hero { padding: 96px 0 112px; } .hero .wrap { grid-template-columns: 1.4fr 1fr; } }
+  .hero h1 { font-size: clamp(56px, 10vw, 112px); letter-spacing: -.04em; line-height: 1; }
+  .tagline { font: 700 clamp(30px, 4.5vw, 48px)/1.15 var(--display); margin: 20px 0 24px; }
+  .tagline mark { background: var(--yellow); padding: 0 10px; }
+  .hero .lead { margin: 0 0 32px; font-size: clamp(18px, 2vw, 21px); }
+  .actions { display: flex; flex-wrap: wrap; gap: 14px; }
+  .by { display: inline-block; font: 700 13px var(--mono); text-transform: uppercase; letter-spacing: .06em; background: var(--mint); border: 2px solid var(--ink); border-radius: 999px; padding: 4px 12px; margin-bottom: 20px; }
+  .qr { justify-self: center; width: min(340px, 100%); align-items: center; padding: 32px; gap: 24px; }
+  .qr img { width: 100%; height: auto; display: block; }
+  .pill { display: inline-block; font: 700 17px var(--display); background: var(--yellow); border: var(--border); border-radius: 999px; padding: 8px 22px; box-shadow: var(--shadow-sm); }
+
+  /* stats */
+  .stats { background: var(--yellow); border-top: var(--border); border-bottom: var(--border); padding: 48px 0; }
+  .stats .grid { text-align: left; }
+  .stats p { font: 500 18px var(--display); margin-top: 6px; }
+
+  /* steps */
+  .steps { counter-reset: s; }
+  .steps .card h3 { display: flex; align-items: center; gap: 12px; }
+  .steps .card h3::before {
+    counter-increment: s; content: counter(s); flex: none; width: 40px; height: 40px; border-radius: 50%;
+    background: var(--yellow); border: var(--border); display: grid; place-items: center; font-size: 18px;
+  }
+
+  /* bullets */
+  .bullets { list-style: none; padding: 0; margin: 0; display: grid; gap: 22px 56px; }
+  @media (min-width: 900px) { .bullets.two { grid-template-columns: 1fr 1fr; } }
+  .bullets li { padding-left: 28px; position: relative; font-size: 19px; }
+  .bullets li::before { content: ""; position: absolute; left: 0; top: .5em; width: 12px; height: 12px; background: var(--red); }
+  .dark .bullets li::before { background: var(--yellow); }
+  .bullets strong { font-weight: 600; }
+
+  /* stack */
+  .stack { display: grid; gap: 20px; }
+  .stack-row { display: grid; gap: 12px; align-items: center; }
+  @media (min-width: 760px) { .stack-row { grid-template-columns: 180px 1fr; } }
+  .stack-row dt { font: 700 15px var(--mono); color: var(--muted); }
+  .stack-row dd { margin: 0; display: flex; flex-wrap: wrap; gap: 12px; }
+  .chip { font: 700 16px var(--display); background: var(--white); border: var(--border); border-radius: 999px; padding: 6px 18px; box-shadow: 3px 3px 0 var(--ink); }
+  .chip.on { background: var(--yellow); }
+  .chip.go { background: var(--mint); }
+
+  /* code */
+  .split { display: grid; gap: 40px; align-items: start; }
+  @media (min-width: 960px) { .split { grid-template-columns: 1.15fr 1fr; } }
+  pre {
+    margin: 0; overflow-x: auto; background: var(--ink); color: var(--paper); border: var(--border);
+    border-radius: var(--radius); box-shadow: 6px 6px 0 var(--yellow); padding: 28px; font: 500 15px/1.8 var(--mono);
+  }
+  @media (min-width: 640px) { pre { font-size: 17px; } }
+
+  .pipeline { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 40px; }
+  .pipeline span[aria-hidden] { font: 700 22px var(--display); }
+
+  .swatches { display: flex; gap: 12px; margin-top: 8px; }
+  .swatches i { width: 44px; height: 44px; border-radius: 50%; border: var(--border); }
+
+  /* team */
+  .team .card a { font: 500 15px var(--mono); color: var(--blue); text-decoration: none; }
+  .team .card a:hover { text-decoration: underline; }
+
+  /* closing */
+  .closing { background: var(--yellow); border-top: var(--border); }
+  .closing h2 { font-size: clamp(44px, 8vw, 96px); letter-spacing: -.03em; line-height: 1.02; max-width: 14ch; margin-bottom: 32px; }
+  .closing p { font-size: 22px; margin-bottom: 20px; }
+  .closing .btn { font-size: clamp(20px, 3vw, 30px); padding: 12px 32px; background: var(--white); }
+
+  footer { background: var(--ink); color: var(--muted-dark); padding: 28px 0; font: 500 14px var(--mono); }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; }
+  footer a { color: var(--paper); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <a class="brand" href="#top"><span class="badge">RM</span> RegretMap</a>
+    <nav aria-label="Sections">
+      <a href="#how">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#ai">AI</a>
+      <a href="#stack">Tech</a>
+      <a href="#team">Team</a>
+    </nav>
+    <a class="btn btn-yellow" href="https://regret-map.shamiltp.me">Open app</a>
+  </div>
+</header>
+
+<main id="top">
+  <!-- Hero -->
+  <div class="hero">
+    <div class="wrap">
+      <div>
+        <span class="by">By Shamil TP &amp; Nihal T</span>
+        <h1>RegretMap</h1>
+        <p class="tagline">Travel smarter.<br><mark>Regret less.</mark></p>
+        <p class="lead">A community map of travel regret — so the next traveller doesn't repeat them.</p>
+        <div class="actions">
+          <a class="btn btn-yellow" href="https://regret-map.shamiltp.me">Explore the map</a>
+          <a class="btn btn-white" href="https://github.com/shamil-tp/RegretMap">View on GitHub</a>
+        </div>
+      </div>
+      <div class="card qr">
+        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGFyaWEtbGFiZWw9IlFSIGNvZGUgbGlua2luZyB0byByZWdyZXQtbWFwLnNoYW1pbHRwLm1lIiB2aWV3Qm94PSItMiAtMiAzNyAzNyIgc2hhcGUtcmVuZGVyaW5nPSJjcmlzcEVkZ2VzIiB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCI+PHBhdGggZmlsbD0iIzE0MTQxNCIgZD0iTTExIDBoMnYxaC0yek0xNSAwaDF2MWgtMXpNMTggMGgzdjFoLTN6TTIyIDBoMXYxaC0xek0yNCAwaDF2MWgtMXpNOCAxaDF2MWgtMXpNMTAgMWgxdjFoLTF6TTEyIDFoM3YxaC0zek0yMiAxaDF2MWgtMXpNOCAyaDF2MWgtMXpNMTEgMmgxdjFoLTF6TTEzIDJoMXYxaC0xek0xNSAyaDJ2MWgtMnpNMTggMmgydjFoLTJ6TTIxIDJoMXYxaC0xek0yNCAyaDF2MWgtMXpNOCAzaDJ2MWgtMnpNMTQgM2gxdjFoLTF6TTE2IDNoMXYxaC0xek0xOCAzaDF2MWgtMXpNMjAgM2g0djFoLTR6TTggNGgydjFoLTJ6TTExIDRoMXYxaC0xek0xNCA0aDF2MWgtMXpNMTYgNGgxdjFoLTF6TTIwIDRoMXYxaC0xek0yMiA0aDJ2MWgtMnpNOCA1aDF2MWgtMXpNMTEgNWgxdjFoLTF6TTEzIDVoMXYxaC0xek0xNSA1aDF2MWgtMXpNMTcgNWgxdjFoLTF6TTIzIDVoMXYxaC0xek04IDZoMXYxaC0xek0xMCA2aDF2MWgtMXpNMTIgNmgxdjFoLTF6TTE0IDZoMXYxaC0xek0xNiA2aDF2MWgtMXpNMTggNmgxdjFoLTF6TTIwIDZoMXYxaC0xek0yMiA2aDF2MWgtMXpNMjQgNmgxdjFoLTF6TTkgN2gxdjFoLTF6TTEzIDdoM3YxaC0zek0xNyA3aDR2MWgtNHpNMjIgN2gzdjFoLTN6TTIgOGgxdjFoLTF6TTUgOGg0djFoLTR6TTExIDhoMnYxaC0yek0xNCA4aDF2MWgtMXpNMTYgOGgydjFoLTJ6TTIwIDhoMXYxaC0xek0yNCA4aDJ2MWgtMnpNMjcgOGg1djFoLTV6TTEgOWgxdjFoLTF6TTUgOWgxdjFoLTF6TTEwIDloNHYxaC00ek0xOSA5aDJ2MWgtMnpNMjMgOWg1djFoLTV6TTMyIDloMXYxaC0xek0wIDEwaDN2MWgtM3pNNSAxMGgydjFoLTJ6TTkgMTBoM3YxaC0zek0xNSAxMGgxdjFoLTF6TTIwIDEwaDR2MWgtNHpNMjUgMTBoNnYxaC02ek0zMiAxMGgxdjFoLTF6TTEgMTFoMXYxaC0xek00IDExaDF2MWgtMXpNOCAxMWgxdjFoLTF6TTEzIDExaDF2MWgtMXpNMTYgMTFoM3YxaC0zek0yMiAxMWgxdjFoLTF6TTI0IDExaDF2MWgtMXpNMjYgMTFoMnYxaC0yek0zMiAxMWgxdjFoLTF6TTEgMTJoMXYxaC0xek00IDEyaDR2MWgtNHpNOSAxMmgxdjFoLTF6TTEzIDEyaDF2MWgtMXpNMTYgMTJoMnYxaC0yek0xOSAxMmg0djFoLTR6TTI0IDEyaDF2MWgtMXpNMjYgMTJoMnYxaC0yek0yOSAxMmgxdjFoLTF6TTMxIDEyaDJ2MWgtMnpNMCAxM2gxdjFoLTF6TTMgMTNoMXYxaC0xek01IDEzaDF2MWgtMXpNNyAxM2gzdjFoLTN6TTEyIDEzaDR2MWgtNHpNMTcgMTNoMXYxaC0xek0yMSAxM2gzdjFoLTN6TTI2IDEzaDJ2MWgtMnpNMzIgMTNoMXYxaC0xek0xIDE0aDJ2MWgtMnpNNCAxNGgxdjFoLTF6TTYgMTRoMXYxaC0xek04IDE0aDN2MWgtM3pNMTIgMTRoMnYxaC0yek0xNSAxNGgxdjFoLTF6TTE3IDE0aDF2MWgtMXpNMTkgMTRoMnYxaC0yek0yMyAxNGgzdjFoLTN6TTI4IDE0aDN2MWgtM3pNMzIgMTRoMXYxaC0xek0zIDE1aDJ2MWgtMnpNNyAxNWgxdjFoLTF6TTkgMTVoMnYxaC0yek0xMiAxNWgxdjFoLTF6TTE0IDE1aDN2MWgtM3pNMTggMTVoMXYxaC0xek0yMCAxNWgxdjFoLTF6TTIyIDE1aDF2MWgtMXpNMjQgMTVoMXYxaC0xek0yNyAxNWgydjFoLTJ6TTMyIDE1aDF2MWgtMXpNMSAxNmgzdjFoLTN6TTYgMTZoMnYxaC0yek0xMSAxNmgydjFoLTJ6TTE0IDE2aDJ2MWgtMnpNMTcgMTZoM3YxaC0zek0yMiAxNmgydjFoLTJ6TTI2IDE2aDJ2MWgtMnpNMjkgMTZoMXYxaC0xek0zIDE3aDF2MWgtMXpNNSAxN2gxdjFoLTF6TTggMTdoNHYxaC00ek0xNyAxN2gxdjFoLTF6TTIwIDE3aDJ2MWgtMnpNMjMgMTdoMXYxaC0xek0yNiAxN2gydjFoLTJ6TTMwIDE3aDN2MWgtM3pNMSAxOGgxdjFoLTF6TTQgMThoMXYxaC0xek02IDE4aDF2MWgtMXpNOSAxOGgydjFoLTJ6TTEyIDE4aDF2MWgtMXpNMTQgMThoMXYxaC0xek0xNiAxOGgxdjFoLTF6TTE4IDE4aDR2MWgtNHpNMjMgMThoMXYxaC0xek0yNiAxOGgxdjFoLTF6TTI5IDE4aDJ2MWgtMnpNMzIgMThoMXYxaC0xek0xIDE5aDN2MWgtM3pNOCAxOWgxdjFoLTF6TTEwIDE5aDJ2MWgtMnpNMTMgMTloMnYxaC0yek0xNyAxOWgzdjFoLTN6TTIyIDE5aDJ2MWgtMnpNMjUgMTloMXYxaC0xek0yOSAxOWgxdjFoLTF6TTAgMjBoMXYxaC0xek00IDIwaDF2MWgtMXpNNiAyMGgxdjFoLTF6TTggMjBoMXYxaC0xek0xMCAyMGgxdjFoLTF6TTEyIDIwaDJ2MWgtMnpNMTYgMjBoMXYxaC0xek0xOCAyMGgydjFoLTJ6TTIzIDIwaDR2MWgtNHpNMzIgMjBoMXYxaC0xek0xIDIxaDF2MWgtMXpNNCAyMWgydjFoLTJ6TTggMjFoMXYxaC0xek0xMCAyMWgxdjFoLTF6TTE1IDIxaDF2MWgtMXpNMTkgMjFoM3YxaC0zek0yNyAyMWgxdjFoLTF6TTI5IDIxaDF2MWgtMXpNMzEgMjFoMnYxaC0yek0wIDIyaDN2MWgtM3pNNiAyMmgydjFoLTJ6TTkgMjJoNnYxaC02ek0xNiAyMmgydjFoLTJ6TTIxIDIyaDF2MWgtMXpNMjMgMjJoNHYxaC00ek0zMCAyMmgxdjFoLTF6TTMyIDIyaDF2MWgtMXpNMyAyM2gxdjFoLTF6TTcgMjNoMXYxaC0xek0xMCAyM2gzdjFoLTN6TTE1IDIzaDJ2MWgtMnpNMTggMjNoMXYxaC0xek0yNyAyM2gxdjFoLTF6TTI5IDIzaDF2MWgtMXpNMzEgMjNoMXYxaC0xek0wIDI0aDN2MWgtM3pNNCAyNGgxdjFoLTF6TTYgMjRoMXYxaC0xek05IDI0aDV2MWgtNXpNMTUgMjRoNXYxaC01ek0yMyAyNGg3djFoLTd6TTMxIDI0aDJ2MWgtMnpNOCAyNWg3djFoLTd6TTE2IDI1aDN2MWgtM3pNMjEgMjVoMnYxaC0yek0yNCAyNWgxdjFoLTF6TTI4IDI1aDV2MWgtNXpNOCAyNmgxdjFoLTF6TTEzIDI2aDF2MWgtMXpNMTUgMjZoMXYxaC0xek0xNyAyNmgxdjFoLTF6TTE5IDI2aDF2MWgtMXpNMjQgMjZoMXYxaC0xek0yNiAyNmgxdjFoLTF6TTI4IDI2aDJ2MWgtMnpNMzIgMjZoMXYxaC0xek04IDI3aDF2MWgtMXpNMTAgMjdoMXYxaC0xek0xMiAyN2gydjFoLTJ6TTIwIDI3aDJ2MWgtMnpNMjMgMjdoMnYxaC0yek0yOCAyN2gydjFoLTJ6TTMxIDI3aDJ2MWgtMnpNMTAgMjhoMnYxaC0yek0xMyAyOGgxdjFoLTF6TTE3IDI4aDF2MWgtMXpNMjEgMjhoMXYxaC0xek0yMyAyOGg2djFoLTZ6TTEwIDI5aDF2MWgtMXpNMTIgMjloMnYxaC0yek0xNyAyOWgydjFoLTJ6TTIxIDI5aDF2MWgtMXpNMjMgMjloMXYxaC0xek0yNSAyOWgxdjFoLTF6TTI3IDI5aDV2MWgtNXpNOCAzMGgxdjFoLTF6TTExIDMwaDF2MWgtMXpNMjEgMzBoNHYxaC00ek0yOCAzMGgydjFoLTJ6TTMxIDMwaDJ2MWgtMnpNOSAzMWgydjFoLTJ6TTE2IDMxaDN2MWgtM3pNMjMgMzFoM3YxaC0zek0yOSAzMWgxdjFoLTF6TTEwIDMyaDN2MWgtM3pNMTQgMzJoMnYxaC0yek0yMCAzMmgzdjFoLTN6TTI0IDMyaDF2MWgtMXpNMjYgMzJoMXYxaC0xek0yOCAzMmgydjFoLTJ6TTMyIDMyaDF2MWgtMXoiLz48ZyBzaGFwZS1yZW5kZXJpbmc9Imdlb21ldHJpY1ByZWNpc2lvbiI+PHJlY3QgeD0iMC41IiB5PSIwLjUiIHdpZHRoPSI2IiBoZWlnaHQ9IjYiIHJ4PSIxLjYiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzE0MTQxNCIgc3Ryb2tlLXdpZHRoPSIxIi8+PHJlY3QgeD0iMiIgeT0iMiIgd2lkdGg9IjMiIGhlaWdodD0iMyIgcng9IjAuOCIgZmlsbD0iI0ZGM0IzMCIvPjxyZWN0IHg9IjI2LjUiIHk9IjAuNSIgd2lkdGg9IjYiIGhlaWdodD0iNiIgcng9IjEuNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMTQxNDE0IiBzdHJva2Utd2lkdGg9IjEiLz48cmVjdCB4PSIyOCIgeT0iMiIgd2lkdGg9IjMiIGhlaWdodD0iMyIgcng9IjAuOCIgZmlsbD0iI0ZGM0IzMCIvPjxyZWN0IHg9IjAuNSIgeT0iMjYuNSIgd2lkdGg9IjYiIGhlaWdodD0iNiIgcng9IjEuNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMTQxNDE0IiBzdHJva2Utd2lkdGg9IjEiLz48cmVjdCB4PSIyIiB5PSIyOCIgd2lkdGg9IjMiIGhlaWdodD0iMyIgcng9IjAuOCIgZmlsbD0iI0ZGM0IzMCIvPjwvZz48L3N2Zz4=" alt="QR code linking to regret-map.shamiltp.me" width="400" height="400">
+        <span class="pill">Scan to explore</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- What we built -->
+  <div class="stats" aria-label="What we built">
+    <div class="wrap grid g3">
+      <div><div class="big">329</div><p>travel lessons on the map</p></div>
+      <div><div class="big">53</div><p>countries, every Indian state</p></div>
+      <div><div class="big">300+</div><p>automated tests</p></div>
+    </div>
+  </div>
+
+  <!-- Problem -->
+  <section id="problem">
+    <div class="wrap">
+      <p class="eyebrow">The problem</p>
+      <h2 class="title">Reviews rate hotels. Nobody maps the mistakes.</h2>
+      <div class="grid g3">
+        <article class="card"><h3>Wrong day</h3><p>Planning the Taj Mahal for a Friday, when it's closed.</p></article>
+        <article class="card"><h3>Wrong season</h3><p>Arriving at a national park in its monsoon closure.</p></article>
+        <article class="card"><h3>Wrong plan</h3><p>Squeezing a full-day trip into one afternoon.</p></article>
+      </div>
+      <p class="lead">RegretMap is about destinations, places, journeys, activities and travel conditions — not a hotel, room or restaurant rating site.</p>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section id="how" class="white">
+    <div class="wrap">
+      <p class="eyebrow">How it works</p>
+      <h2 class="title">Search a place. Learn before you go.</h2>
+      <div class="grid g4 steps">
+        <article class="card"><h3>Search</h3><p>Any destination in the world.</p></article>
+        <article class="card"><h3>Map</h3><p>Every story pinned, with a heatmap.</p></article>
+        <article class="card"><h3>Discuss</h3><p>Reactions and threaded replies.</p></article>
+        <article class="card"><h3>Ask</h3><p>AI tips and chat from the stories.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features">
+    <div class="wrap">
+      <p class="eyebrow">Features</p>
+      <h2 class="title">Four pages, one purpose.</h2>
+      <div class="grid g2">
+        <article class="card"><h3>Home</h3><span class="path">/</span><p>Search any destination or town worldwide, browse photo postcards, and explore every story on a map with filters and a heatmap. No AI runs here.</p></article>
+        <article class="card"><h3>Destination page</h3><span class="path">/destinations/[slug]</span><p>“Before you go” lessons with links to their source stories, the destination's stories on a map and feed, and an “Ask travellers” chat.</p></article>
+        <article class="card"><h3>Story page</h3><span class="path">/stories/[id]</span><p>What happened, what went wrong, the lesson and advice. React 👍 😬 🙋 💡 and reply in threads up to six levels deep.</p></article>
+        <article class="card"><h3>Share an experience</h3><span class="path">/submit</span><p>Pick the place, category and travel month, then add your lesson. Stories go live right away; AI only labels them for moderators.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Content -->
+  <section id="content" class="white">
+    <div class="wrap">
+      <p class="eyebrow">Content</p>
+      <h2 class="title">What's on the map.</h2>
+      <div class="grid g3">
+        <article class="card"><div class="big" style="color:var(--red)">201</div><h3>India travel notes</h3><p>Across all 28 states and 8 Union Territories.</p></article>
+        <article class="card"><div class="big" style="color:var(--blue)">128</div><h3>World travel notes</h3><p>75 destinations in 52 countries, on every inhabited continent.</p></article>
+        <article class="card"><div class="big">You</div><h3>Community stories</h3><p>Personal accounts shared by travellers through the site.</p></article>
+      </div>
+      <p class="lead">Travel notes are written by the RegretMap team and always labelled “Travel note”, never passed off as a personal experience.</p>
+    </div>
+  </section>
+
+  <!-- AI -->
+  <section id="ai" class="dark">
+    <div class="wrap">
+      <p class="eyebrow">AI that doesn't make things up</p>
+      <h2 class="title">Answers come only from real stories.</h2>
+      <ul class="bullets two">
+        <li><strong>Grounded only</strong> — the summary and chat see just this destination's published stories, treated as untrusted data.</li>
+        <li><strong>Checked sources</strong> — every tip links to its source stories; the server rejects unknown or other-destination references.</li>
+        <li><strong>No invented numbers</strong> — a price, time or distance must appear in the cited stories, or it's dropped.</li>
+        <li><strong>No story? It says so</strong> — an answer citing no story becomes “the stories don't cover that yet”.</li>
+        <li><strong>Honest failures</strong> — if Gemini is down, the summary says it will appear later and chat shows related stories.</li>
+        <li><strong>Reliable</strong> — Gemini runs server-side with a rotating pool of up to ten API keys, a fallback model and cached summaries.</li>
+      </ul>
+      <p class="lead">Trip-planning questions get a fixed, server-written note and a referral to The Visa Guy for full plans, visas or bookings.</p>
+    </div>
+  </section>
+
+  <!-- Security -->
+  <section id="security">
+    <div class="wrap">
+      <p class="eyebrow">Accounts, moderation &amp; security</p>
+      <h2 class="title">Safe by default.</h2>
+      <div class="grid g3">
+        <article class="card"><h3>Row Level Security</h3><p>On every table. The public reads only published stories and visible comments.</p></article>
+        <article class="card"><h3>Session identity</h3><p>Comments and reactions use your own session. User IDs can't be supplied or faked.</p></article>
+        <article class="card"><h3>Server-side secrets</h3><p>Supabase and Gemini keys never reach the browser, logs or URLs.</p></article>
+        <article class="card"><h3>Validated input</h3><p>zod schemas, length limits, stripped control characters and rate limits.</p></article>
+        <article class="card"><h3>Anonymous</h3><p>Public pages never show emails or account IDs. User content renders as plain text.</p></article>
+        <article class="card"><h3>Moderation</h3><p>Email accounts via Supabase Auth. Moderators review AI-labelled submissions.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tech stack -->
+  <section id="stack" class="white">
+    <div class="wrap">
+      <p class="eyebrow">Tech stack</p>
+      <h2 class="title">Built with.</h2>
+      <dl class="stack">
+        <div class="stack-row"><dt>Framework</dt><dd><span class="chip on">Next.js 16</span><span class="chip">React 19</span><span class="chip">TypeScript</span></dd></div>
+        <div class="stack-row"><dt>Styling</dt><dd><span class="chip on">Tailwind CSS 4</span><span class="chip">Space Grotesk</span><span class="chip">IBM Plex Sans</span><span class="chip">JetBrains Mono</span></dd></div>
+        <div class="stack-row"><dt>Data &amp; auth</dt><dd><span class="chip on">Supabase</span><span class="chip">PostgreSQL</span><span class="chip">Row Level Security</span></dd></div>
+        <div class="stack-row"><dt>Maps</dt><dd><span class="chip on">Leaflet</span><span class="chip">leaflet.heat</span><span class="chip">OpenStreetMap</span><span class="chip">Photon</span></dd></div>
+        <div class="stack-row"><dt>AI</dt><dd><span class="chip on">Google Gemini (server-side)</span></dd></div>
+        <div class="stack-row"><dt>Quality</dt><dd><span class="chip on">zod</span><span class="chip">Vitest</span><span class="chip">lucide-react</span></dd></div>
+        <div class="stack-row"><dt>Platform</dt><dd><span class="chip on">Installable PWA</span></dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- Getting started -->
+  <section id="start">
+    <div class="wrap">
+      <p class="eyebrow">Getting started</p>
+      <h2 class="title">Run it locally.</h2>
+      <div class="split">
+        <pre><code>git clone https://github.com/shamil-tp/RegretMap.git
+cd RegretMap
+npm install
+cp .env.example .env.local
+npm run dev</code></pre>
+        <ul class="bullets">
+          <li><strong>Requirements</strong> — Node.js 24 and npm 11.19+.</li>
+          <li><strong>Environment</strong> — Supabase URL and keys, Gemini key pool and model, moderator emails, site URL.</li>
+          <li><strong>Database</strong> — run <code>supabase/migrations</code> in order, then the India and world seeds.</li>
+          <li><strong>Auth</strong> — add <code>&lt;site&gt;/auth/callback</code> to Supabase redirect URLs.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testing -->
+  <section id="testing" class="white">
+    <div class="wrap">
+      <p class="eyebrow">Testing, CI &amp; releases</p>
+      <h2 class="title">Checked on every push.</h2>
+      <div class="pipeline" aria-label="CI pipeline">
+        <span class="chip">npm ci</span><span aria-hidden="true">→</span>
+        <span class="chip">lint</span><span aria-hidden="true">→</span>
+        <span class="chip">type-check</span><span aria-hidden="true">→</span>
+        <span class="chip">tests</span><span aria-hidden="true">→</span>
+        <span class="chip go">build</span>
+      </div>
+      <div class="grid g3">
+        <article class="card"><h3>~300 tests</h3><p>Validation, RLS-dependent actions, AI grounding, key rotation, comments, reactions and seeds. Gemini is always mocked.</p></article>
+        <article class="card"><h3>CI</h3><p>Runs on every pull request and push to main, on Node 24, before anything ships.</p></article>
+        <article class="card"><h3>Releases</h3><p>Push a tag like v1.2.3 to re-run every check and publish a GitHub Release.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Design -->
+  <section id="design">
+    <div class="wrap">
+      <p class="eyebrow">Design &amp; credits</p>
+      <h2 class="title">Rounded neo-brutalism.</h2>
+      <div class="grid g2">
+        <article class="card">
+          <h3>Design</h3>
+          <p>A raw-paper canvas with a dot grid, black ink borders, hard block shadows, caution-yellow calls to action, regret red and map blue. Motion is CSS only and turns off for reduced-motion.</p>
+          <div class="swatches" aria-hidden="true"><i style="background:var(--paper)"></i><i style="background:var(--red)"></i><i style="background:var(--blue)"></i><i style="background:var(--yellow)"></i><i style="background:var(--mint)"></i></div>
+        </article>
+        <article class="card"><h3>Credits</h3><p>Map tiles © OpenStreetMap contributors. Place search by Photon. Destination photos from Wikimedia Commons under free licences, each showing its author and licence.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Limitations -->
+  <section id="limitations" class="white">
+    <div class="wrap">
+      <p class="eyebrow">Known limitations</p>
+      <h2 class="title">What's next.</h2>
+      <ul class="bullets">
+        <li><strong>Reporting</strong> — the Report button is a placeholder; moderators hide stories with SQL for now.</li>
+        <li><strong>Accounts</strong> — no password reset or account deletion yet.</li>
+        <li><strong>Rate limits</strong> — kept in memory per server instance (the submission cap is shared).</li>
+        <li><strong>Not verified facts</strong> — stories are personal accounts. Always check official sources for permits, weather and safety.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Team -->
+  <section id="team" class="dark team">
+    <div class="wrap">
+      <p class="eyebrow">The team</p>
+      <h2 class="title">Made by Shamil TP &amp; Nihal T.</h2>
+      <div class="grid g2">
+        <article class="card"><h3>Shamil TP</h3><a href="https://github.com/shamil-tp" rel="author">github.com/shamil-tp</a><a href="https://www.linkedin.com/in/shamil-tp/" rel="author">linkedin.com/in/shamil-tp</a><p>Co-creator of RegretMap.</p></article>
+        <article class="card"><h3>Nihal T</h3><a href="https://github.com/MrNihalT" rel="author">github.com/MrNihalT</a><a href="https://www.linkedin.com/in/mrnihalt/" rel="author">linkedin.com/in/mrnihalt</a><p>Co-creator of RegretMap.</p></article>
+      </div>
+      <p class="lead">RegretMap — built by Shamil TP and Nihal T. Live at regret-map.shamiltp.me</p>
+    </div>
+  </section>
+
+  <!-- Closing -->
+  <section class="closing">
+    <div class="wrap">
+      <h2>Every journey leaves a lesson.</h2>
+      <p>Try it now:</p>
+      <a class="btn" href="https://regret-map.shamiltp.me">regret-map.shamiltp.me</a>
+      <p style="margin-top:32px">Thank you! — Shamil TP &amp; Nihal T</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 RegretMap · Shamil TP &amp; Nihal T</span>
+    <span><a href="https://github.com/shamil-tp/RegretMap">Source on GitHub</a></span>
+  </div>
+</footer>
+</body>
+</html>

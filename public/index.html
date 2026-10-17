@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RegretMap by Shamil TP — Travel smarter. Regret less.</title>
+<meta name="description" content="RegretMap is a community travel map built by Shamil TP. Read real travellers' mistakes and lessons for any destination, get a grounded “Before you go” summary, and avoid repeating common travel regrets.">
+<meta name="keywords" content="Shamil TP, Shamil T P, RegretMap, Regret Map, Shamil TP project, travel mistakes, travel lessons, travel regrets, travel tips">
+<meta name="author" content="Shamil TP">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://regret-map.shamiltp.me/index.html">
+<meta name="theme-color" content="#FFFFFF">
+<link rel="icon" type="image/png" sizes="192x192" href="/pwa-icon/192.png">
+<link rel="apple-touch-icon" href="/pwa-icon/apple-180.png">
+<link rel="manifest" href="/manifest.webmanifest">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="RegretMap">
+<meta property="og:url" content="https://regret-map.shamiltp.me/index.html">
+<meta property="og:title" content="RegretMap by Shamil TP — Travel smarter. Regret less.">
+<meta property="og:description" content="A community map of real travel mistakes and lessons, built by Shamil TP.">
+<meta property="og:image" content="https://regret-map.shamiltp.me/pwa-icon/512.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="RegretMap by Shamil TP">
+<meta name="twitter:description" content="A community map of real travel mistakes and lessons, built by Shamil TP.">
+<meta name="twitter:image" content="https://regret-map.shamiltp.me/pwa-icon/512.png">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "@id": "https://regret-map.shamiltp.me/#app",
+      "name": "RegretMap",
+      "url": "https://regret-map.shamiltp.me",
+      "applicationCategory": "TravelApplication",
+      "operatingSystem": "Any (web, installable PWA)",
+      "description": "A community map of real travel mistakes and lessons. Search a destination, read travellers' stories, and get a Before-you-go summary grounded only in those stories.",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "author": { "@id": "https://regret-map.shamiltp.me/#shamil-tp" },
+      "creator": { "@id": "https://regret-map.shamiltp.me/#shamil-tp" }
+    },
+    {
+      "@type": "Person",
+      "@id": "https://regret-map.shamiltp.me/#shamil-tp",
+      "name": "Shamil TP",
+      "alternateName": ["Shamil T P", "shamil-tp"],
+      "url": "https://shamiltp.me",
+      "jobTitle": "Software Developer",
+      "sameAs": ["https://github.com/shamil-tp"]
+    }
+  ]
+}
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+  :root {
+    --bg: #F7F6F2; --surface: #FFFFFF; --ink: #111111; --muted: #555555;
+    --red: #FF3B30; --blue: #0055FF; --yellow: #FFD600; --mint: #00E599;
+    --border: 2.5px solid #000; --shadow: 5px 5px 0 #000; --shadow-sm: 3px 3px 0 #000;
+    --display: "Space Grotesk", system-ui, sans-serif;
+    --body: "IBM Plex Sans", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; color: var(--ink); font: 400 17px/1.6 var(--body);
+    background: var(--bg) radial-gradient(rgba(0,0,0,.08) 1px, transparent 1px) 0 0 / 24px 24px;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+  a { color: inherit; }
+  h1, h2, h3 { font-family: var(--display); line-height: 1.1; margin: 0; letter-spacing: -.02em; }
+
+  header { border-bottom: var(--border); background: var(--surface); }
+  header .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+  .logo { font: 700 22px var(--display); text-decoration: none; }
+  .logo span { color: var(--red); }
+
+  .btn {
+    display: inline-block; padding: 12px 22px; border: var(--border); border-radius: 9999px;
+    font: 700 16px var(--display); text-decoration: none; box-shadow: var(--shadow-sm);
+    transition: transform .15s, box-shadow .15s;
+  }
+  .btn:hover { transform: translate(-2px,-2px); box-shadow: var(--shadow); }
+  .btn:active { transform: translate(3px,3px); box-shadow: none; }
+  .btn-primary { background: var(--yellow); }
+  .btn-ghost { background: var(--surface); }
+  header .btn { padding: 8px 16px; font-size: 14px; }
+
+  .tag {
+    display: inline-block; font: 700 12px var(--mono); text-transform: uppercase; letter-spacing: .06em;
+    padding: 4px 10px; border: 2px solid #000; border-radius: 9999px; background: var(--mint);
+  }
+
+  .hero { padding: 72px 0 64px; border-bottom: var(--border); }
+  .hero h1 { font-size: clamp(40px, 7vw, 76px); margin: 20px 0 16px; max-width: 14ch; }
+  .hero h1 em { font-style: normal; color: var(--red); }
+  .hero p { font-size: 19px; max-width: 56ch; color: var(--muted); margin: 0 0 32px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 14px; }
+
+  section { padding: 64px 0; }
+  section h2 { font-size: clamp(28px, 4vw, 40px); margin-bottom: 28px; }
+  .grid { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+  .card {
+    background: var(--surface); border: var(--border); border-radius: 18px;
+    box-shadow: var(--shadow); padding: 24px;
+  }
+  .card h3 { font-size: 22px; margin: 12px 0 8px; }
+  .card p { margin: 0; color: var(--muted); font-size: 16px; }
+  .dot { width: 40px; height: 40px; border: 2px solid #000; border-radius: 50%; display: grid; place-items: center; font-size: 20px; }
+
+  .steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; counter-reset: s; }
+  .steps li {
+    counter-increment: s; display: flex; gap: 16px; align-items: baseline;
+    background: var(--surface); border: var(--border); border-radius: 14px; padding: 16px 20px; box-shadow: var(--shadow-sm);
+  }
+  .steps li::before { content: "0" counter(s); font: 700 14px var(--mono); color: var(--blue); }
+
+  .stack { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; padding: 0; list-style: none; }
+  .stack li { font: 500 14px var(--mono); padding: 6px 12px; border: 2px solid #000; border-radius: 9999px; background: var(--surface); }
+
+  .author { background: var(--yellow); border-top: var(--border); border-bottom: var(--border); }
+  .author .wrap { display: grid; gap: 24px; grid-template-columns: 1fr auto; align-items: center; }
+  .author p { margin: 8px 0 0; max-width: 60ch; }
+
+  footer { padding: 28px 0; font: 500 14px var(--mono); color: var(--muted); }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; }
+
+  @media (max-width: 640px) {
+    .hero { padding: 48px 0; }
+    section { padding: 48px 0; }
+    .author .wrap { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <a class="logo" href="/">Regret<span>Map</span></a>
+    <a class="btn btn-primary" href="/">Open the app</a>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <div class="wrap">
+      <span class="tag">A project by Shamil TP</span>
+      <h1>Every journey leaves a <em>lesson.</em></h1>
+      <p>RegretMap is a community map of travel mistakes. Travellers share what went wrong and what they'd do differently, so the next person doesn't repeat it.</p>
+      <div class="actions">
+        <a class="btn btn-primary" href="/">Search a destination</a>
+        <a class="btn btn-ghost" href="/submit">Share your story</a>
+      </div>
+    </div>
+  </div>
+
+  <section id="features">
+    <div class="wrap">
+      <h2>What you can do</h2>
+      <div class="grid">
+        <article class="card">
+          <div class="dot" style="background:var(--yellow)" aria-hidden="true">📍</div>
+          <h3>Explore the map</h3>
+          <p>Every story is a pin. Filter by country, category and season, or switch on the regret heatmap.</p>
+        </article>
+        <article class="card">
+          <div class="dot" style="background:var(--mint)" aria-hidden="true">🧳</div>
+          <h3>Before you go</h3>
+          <p>Each destination gets a short summary of lessons, with every tip linked to the stories behind it.</p>
+        </article>
+        <article class="card">
+          <div class="dot" style="background:#9EC1FF" aria-hidden="true">💬</div>
+          <h3>Ask travellers</h3>
+          <p>A chat that answers only from that destination's published stories. No made-up advice.</p>
+        </article>
+        <article class="card">
+          <div class="dot" style="background:#FFB4AE" aria-hidden="true">😬</div>
+          <h3>React &amp; discuss</h3>
+          <p>Mark stories Helpful, Yikes or Been there, and reply in threaded discussions.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="how" style="padding-top:0">
+    <div class="wrap">
+      <h2>How it works</h2>
+      <ol class="steps">
+        <li>Search any destination, or pick one on the map.</li>
+        <li>Read real experiences: what happened, what went wrong, the lesson.</li>
+        <li>Plan with the Before-you-go summary and ask questions.</li>
+        <li>Back home? Share your own story. It goes live right away.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="stack" style="padding-top:0">
+    <div class="wrap">
+      <h2>Built with</h2>
+      <ul class="stack">
+        <li>Next.js 16</li><li>React 19</li><li>TypeScript</li><li>Tailwind CSS 4</li>
+        <li>Supabase</li><li>Gemini AI</li><li>OpenStreetMap</li><li>Installable PWA</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="author" id="shamil-tp">
+    <div class="wrap" style="padding-top:48px;padding-bottom:48px">
+      <div>
+        <h2 style="margin:0">Made by Shamil TP</h2>
+        <p>RegretMap was designed and built by <strong>Shamil TP</strong>, a software developer who believes the most useful travel advice comes from the trips that didn't go to plan.</p>
+      </div>
+      <a class="btn btn-ghost" href="https://github.com/shamil-tp" rel="author">Shamil TP on GitHub</a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© <span id="y">2026</span> RegretMap · Shamil TP</span>
+    <span><a href="/">regret-map.shamiltp.me</a> · <a href="https://shamiltp.me">shamiltp.me</a></span>
+  </div>
+</footer>
+<script>document.getElementById("y").textContent = new Date().getFullYear();</script>
+</body>
+</html>

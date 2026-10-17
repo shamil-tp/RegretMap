@@ -13,6 +13,17 @@ export function SiteFooter() {
           official sources for current safety, weather, and transport
           information.
         </p>
+        <p className="mt-2">
+          {/* Static about page in public/; a plain <a>, not a Next route. */}
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          <a href="/index.html" className="underline hover:text-ink">
+            About RegretMap
+          </a>{" "}
+          · Built by{" "}
+          <a href="https://github.com/shamil-tp" rel="author" className="underline hover:text-ink">
+            Shamil TP
+          </a>
+        </p>
         <InstallAppButton className="mt-4" />
       </div>
     </footer>

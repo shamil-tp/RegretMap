@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "space grotesk",
+        "createdAt": "2026-10-17T11:09:25.689Z",
+        "reason": "Project design system: src/design/design.md §2/§3 mandates Space Grotesk as the display face"
+      }
+    ]
+  }
+}

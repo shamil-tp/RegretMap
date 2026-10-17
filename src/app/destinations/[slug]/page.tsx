@@ -28,6 +28,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {
       title: `${destination.name} travel lessons — RegretMap`,
       description: `Traveller experiences, mistakes and practical lessons from ${destination.name}${location ? `, ${location}` : ""}.`,
+      alternates: { canonical: `/destinations/${destination.slug}` },
     };
   } catch {
     return { title: "RegretMap" };

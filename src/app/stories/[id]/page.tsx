@@ -34,6 +34,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {
       title: `${story.title} — ${story.destination.name} — RegretMap`,
       description: story.lesson ?? story.body.slice(0, 150),
+      alternates: { canonical: `/stories/${story.id}` },
+      openGraph: { type: "article", title: story.title, publishedTime: story.publishedAt },
     };
   } catch {
     return { title: "RegretMap" };

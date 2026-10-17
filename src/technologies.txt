@@ -1,0 +1,142 @@
+REGRETMAP — TECHNOLOGIES USED
+=============================
+Travel smarter. Regret less.
+Live site: https://regret-map.shamiltp.me
+Versions are the ones installed from package-lock.json.
+
+
+1. CORE FRAMEWORK & LANGUAGE
+----------------------------
+- Next.js 16.4.0            React framework (App Router, Server Components, Server Actions,
+                            Route Handlers, Cache Components / Partial Prerendering,
+                            streaming with Suspense, next/font, next/image, next/og,
+                            next/dynamic, typed routes, proxy.ts)
+- React 19.3.0              UI library (useSyncExternalStore, useTransition, Suspense)
+- React DOM 19.3.0
+- TypeScript 5.9.3          Strict mode, typed throughout
+- Node.js 24                Runtime (local development and CI)
+- npm 11.19+                Package manager (package-lock.json)
+- Turbopack                 Next.js bundler for dev and production builds
+
+
+2. STYLING, DESIGN & UI
+-----------------------
+- Tailwind CSS 4.3.3        Utility-first CSS with @theme design tokens
+- @tailwindcss/turbopack 4.3.3   Tailwind integration for Turbopack
+- Design system             Rounded neo-brutalism: raw-paper dot-grid canvas, black ink
+                            borders, hard zero-blur block shadows, regret red / map blue /
+                            caution yellow / mint accents (spec in src/design/design.md)
+- Google Fonts via next/font (self-hosted at build time, no runtime requests):
+    - Space Grotesk         Headings / display
+    - IBM Plex Sans         Body text
+    - JetBrains Mono        Tags, metadata, counters
+- lucide-react 1.55.0       Icon set
+- CSS animations            Transform/opacity only (fade-up, pop-in, press physics,
+                            emoji pop, animated dotted route); respects
+                            prefers-reduced-motion. No animation library.
+- Inline SVG                Hero illustration and route artwork
+
+
+3. MAPS & LOCATION
+------------------
+- Leaflet 1.9.4             Interactive map engine
+- React Leaflet 5.0.0       React bindings for Leaflet
+- @react-leaflet/core 3.0.0
+- leaflet.heat 0.2.0        Story-density heatmap layer
+- OpenStreetMap             Map tiles (with attribution; greyscale styling)
+- Photon (komoot)           Place search / autocomplete (OpenStreetMap data), called
+                            from a server route (/api/places/autocomplete)
+- Haversine distance        Nearest-destination matching (src/lib/geo.ts)
+
+
+4. BACKEND, DATABASE & AUTH
+---------------------------
+- Supabase                  Hosted backend
+    - PostgreSQL            Database (destinations, stories, comments, reactions,
+                            moderation labels, AI summary cache)
+    - Row Level Security    Policies on every table; column-level grants;
+                            SECURITY DEFINER functions and triggers
+    - Supabase Auth         Email + password sign-up/sign-in, email confirmation
+    - PostgREST             Auto-generated REST API used by the client libraries
+- @supabase/supabase-js 2.117.0   Database / auth client
+- @supabase/ssr 0.12.6      Cookie-based sessions for Next.js server components,
+                            server actions and proxy.ts
+- SQL migrations            Versioned schema in supabase/migrations/
+- SQL seed generators       Node.js (.mjs) scripts that validate travel-note data and
+                            generate idempotent seed SQL (supabase/seed/india, /world)
+
+
+5. ARTIFICIAL INTELLIGENCE
+--------------------------
+- Google Gemini API         Server-side REST calls (model configurable, e.g.
+                            gemini-3.1-flash-lite) with JSON-schema structured output
+- Features powered by Gemini:
+    - "Before you go" destination summaries with validated source stories
+    - "Ask travellers" destination chat answering only from published stories
+    - AI moderation labels for new submissions (annotate only)
+- Reliability: API key pool (GEMINI_API_KEY, GEMINI_API_KEY2, …) with round-robin
+  rotation, per-key rest on rate limits/overloads/timeouts, optional fallback model,
+  retries, database + in-memory caching
+- Grounding safeguards: server-validated story citations, no unsupported numbers,
+  uncited answers replaced with honest "not covered" replies, prompt-injection
+  resistant delimiting of untrusted story text
+
+
+6. VALIDATION & SECURITY
+------------------------
+- zod 4.6.5                 Schema validation for forms, server actions, AI output
+- Server-only secrets       Supabase secret key and Gemini keys never reach the browser
+- Rate limiting             In-memory limiters for submissions, comments, reactions, chat
+- Input sanitising          Control/bidi character stripping, length limits, plain-text
+                            rendering (no HTML injection)
+- Open-redirect protection  Safe post-login redirect paths
+
+
+7. PROGRESSIVE WEB APP (PWA)
+----------------------------
+- Web App Manifest          src/app/manifest.ts (standalone, installable)
+- App icons                 Generated with next/og (ImageResponse) at build time,
+                            including a maskable icon and an Apple touch icon
+- Service Worker            Hand-written public/sw.js: cache-first for hashed static
+                            assets, network-only navigations with an offline fallback
+                            page, never caches pages, auth, API or cross-origin data
+- Install prompt            beforeinstallprompt (Chromium) + iOS "Add to Home Screen" help
+- Offline detection         online/offline events with an offline-only notice
+
+
+8. CONTENT & MEDIA
+------------------
+- Editorial travel notes    201 India notes (28 states + 8 Union Territories) and
+                            128 world notes (75 destinations, 52 countries)
+- Wikimedia Commons         Freely licensed destination photos (CC0 / public domain /
+                            CC BY / CC BY-SA) with author and licence credits,
+                            fetched via the Wikipedia & Commons APIs by a Node script
+- next/image                Optimised, lazy-loaded remote images
+
+
+9. TESTING & CODE QUALITY
+-------------------------
+- Vitest 4.1.11             Unit and integration tests (300+ tests; Gemini always mocked)
+- ESLint 9.39.5             Linting
+- eslint-config-next 16.4.0 Next.js + React rules (core-web-vitals, TypeScript)
+- TypeScript type-check     tsc --noEmit (with next typegen)
+- SQL RLS test scripts      supabase/tests/*.sql (run in the Supabase SQL Editor)
+- @types/node 20.19.43, @types/react 19.3.0, @types/react-dom 19.3.0,
+  @types/leaflet 1.9.22, @types/leaflet.heat 0.2.5
+
+
+10. DEVOPS, CI/CD & HOSTING
+---------------------------
+- Git & GitHub              Version control (github.com/shamil-tp/RegretMap)
+- GitHub Actions            CI (lint → type-check → tests → build on Node 24) and
+                            tag-based releases (semantic version tags → GitHub Release)
+- HTTPS custom domain       regret-map.shamiltp.me
+- Supabase Cloud            Database and authentication hosting
+- Environment variables     .env.local (git-ignored) with .env.example template
+
+
+11. DEVELOPMENT TOOLS
+---------------------
+- Claude Code               AI coding assistant used during development
+- Supabase SQL Editor       Running migrations, seeds and RLS checks
+- Python                    One-off maintenance/automation scripts during development
